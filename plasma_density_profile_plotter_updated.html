@@ -1,0 +1,2595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plasma Density Profile Plotter</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)'], ['$', '$']],
+        displayMath: [['\\[', '\\]'], ['$$', '$$']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-soft: #f8fafc;
+      --panel: rgba(255,255,255,0.92);
+      --panel-2: #f7f9fc;
+      --panel-3: #eef3f8;
+      --border: #d6dee8;
+      --grid: #e5ecf4;
+      --text: #24364b;
+      --muted: #607289;
+      --accent: #1f77b4;
+      --accent-strong: #155a8a;
+      --accent-soft: rgba(31,119,180,0.10);
+      --orange: #f37726;
+      --orange-strong: #da5b08;
+      --orange-soft: rgba(243,119,38,0.12);
+      --success: #2e7d32;
+      --warning: #a25b00;
+      --danger: #b42318;
+      --shadow: 0 16px 36px rgba(31, 53, 86, 0.08);
+      --radius: 20px;
+      --radius-sm: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(180deg, #ffffff 0%, #f6f9fc 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    body { min-height: 100vh; }
+
+    .page {
+      width: min(1380px, calc(100vw - 28px));
+      margin: 18px auto 34px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 24px 28px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(214,222,232,0.9);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.9rem, 2.9vw, 2.6rem);
+      line-height: 1.06;
+      letter-spacing: -0.035em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 860px;
+      color: var(--muted);
+    }
+
+    .hero-badge {
+      flex-shrink: 0;
+      align-self: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      border: 1px solid rgba(31,119,180,0.18);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .stack {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(214,222,232,0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .section-header h2 {
+      margin: 0 0 5px;
+      font-size: 1.14rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field, .option-box {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .field label, .option-box .field-title {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .field small, .micro-note {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .span-12 { grid-column: span 12; }
+    .span-8 { grid-column: span 8; }
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
+    .span-3 { grid-column: span 3; }
+    .span-2 { grid-column: span 2; }
+
+    input, select, button {
+      font: inherit;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      padding: 11px 13px;
+      border-radius: 12px;
+      outline: none;
+      transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(31,119,180,0.12);
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    input[type="color"] {
+      width: 100%;
+      min-height: 46px;
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      cursor: pointer;
+    }
+
+    .inline-pair {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .unit-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      background: var(--panel-3);
+      border: 1px solid var(--border);
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .segmented {
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      padding: 6px;
+      border-radius: 14px;
+      background: var(--panel-3);
+      border: 1px solid var(--border);
+    }
+
+    .segmented.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .segmented button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 13px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 800;
+      transition: background .16s ease, color .16s ease, transform .16s ease, box-shadow .16s ease;
+    }
+
+    .segmented button.active {
+      background: #ffffff;
+      color: var(--accent-strong);
+      box-shadow: 0 8px 18px rgba(31,119,180,0.12);
+    }
+
+    .switch-tile {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 46px;
+      padding: 11px 13px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
+      border: 1px solid var(--border);
+    }
+
+    .switch-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .group-card {
+      background: linear-gradient(180deg, rgba(238,243,248,0.84), rgba(247,249,252,0.95));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      height: 100%;
+    }
+
+    .group-card h3 {
+      margin: 0 0 5px;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .group-card .group-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .inner-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .mode-block {
+      margin-top: 6px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid var(--border);
+    }
+
+    .charts-header-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .header-mode-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 220px;
+    }
+
+    .header-mode-label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .action-btn {
+      border: 0;
+      cursor: pointer;
+      border-radius: 12px;
+      padding: 11px 16px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: #fff;
+      box-shadow: 0 12px 22px rgba(31,119,180,0.20);
+    }
+
+    .action-btn.orange {
+      background: linear-gradient(180deg, var(--orange) 0%, var(--orange-strong) 100%);
+      color: #fff;
+      box-shadow: 0 12px 22px rgba(243,119,38,0.22);
+    }
+
+    .action-btn.secondary {
+      background: var(--panel-3);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .chart-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
+      overflow: hidden;
+    }
+
+    .chart-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chart-name {
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .chart-unit {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      height: 420px;
+    }
+
+    .caption {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .chart-controls-shell {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(247,249,252,0.95), rgba(255,255,255,0.95));
+    }
+
+    .chart-controls-shell h3 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .chart-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    .formula-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 14px;
+    }
+
+    .formula-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
+      border: 1px solid var(--border);
+      min-height: 164px;
+    }
+
+    .formula-card .metric-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+
+    .formula-content {
+      min-height: 108px;
+      display: flex;
+      align-items: flex-start;
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-top: 2px;
+    }
+
+    .formula-shell {
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    #physicsMath, #profileMath {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .formula-content svg,
+    #physicsMath svg,
+    #profileMath svg {
+      max-width: 100%;
+      height: auto !important;
+    }
+
+    .formula-content .mjx-container[display="true"],
+    #physicsMath .mjx-container[display="true"],
+    #profileMath .mjx-container[display="true"] {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 2px;
+    }
+
+    .formula-shell + .formula-shell {
+      margin-top: 14px;
+    }
+
+    .math-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .status-list {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .status-item {
+      padding: 11px 13px;
+      border-radius: 12px;
+      background: rgba(243,119,38,0.10);
+      border: 1px solid rgba(243,119,38,0.20);
+      color: var(--warning);
+      font-size: 0.9rem;
+    }
+
+    .footer-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    #toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      padding: 13px 16px;
+      border-radius: 14px;
+      background: rgba(18, 29, 46, 0.94);
+      color: #ffffff;
+      box-shadow: 0 18px 34px rgba(15, 23, 42, 0.28);
+      transform: translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+      z-index: 1000;
+      max-width: 420px;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1120px) {
+      .chart-grid, .formula-grid {
+        grid-template-columns: 1fr;
+      }
+      .span-8, .span-6, .span-4, .span-3, .span-2 {
+        grid-column: span 12;
+      }
+    }
+
+    @media (max-width: 780px) {
+      .page {
+        width: min(100vw - 16px, 100%);
+        margin: 10px auto 26px;
+      }
+
+      .hero, .panel {
+        padding: 18px;
+      }
+
+      .hero {
+        flex-direction: column;
+      }
+
+      .canvas-wrap {
+        height: 360px;
+      }
+
+      .chart-controls-grid, .controls-grid, .inner-grid {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <h1>Plasma Density Profile Plotter</h1>
+        <p>Build a plasma-density profile with fully editable ramps, plateau, styling, annotations, and export-friendly linear and logarithmic views for GitHub Pages.</p>
+      </div>
+      <div class="hero-badge">JupyterLab-inspired light theme</div>
+    </header>
+
+    <div class="stack">
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <h2>Profile controls</h2>
+            <p class="subtle">Set the geometry, ramp behavior, density unit, and plasma profile parameters. The horizontal axis uses <strong>μm</strong> throughout.</p>
+          </div>
+        </div>
+
+        <div class="controls-grid">
+          <div class="field span-12">
+            <label for="plotTitle">Plot title</label>
+            <input id="plotTitle" type="text" value="Plasma density profile" />
+          </div>
+
+          <div class="field span-6">
+            <label>Density unit</label>
+            <div class="segmented" id="unitSegment">
+              <button type="button" data-unit="m3" class="active">/m³</button>
+              <button type="button" data-unit="cm3">/cm³</button>
+            </div>
+          </div>
+
+          <div class="field span-6">
+            <label>Clipboard background</label>
+            <div class="segmented" id="bgSegment">
+              <button type="button" data-bg="white" class="active">Pure white</button>
+              <button type="button" data-bg="transparent">Transparent</button>
+            </div>
+          </div>
+
+          <div class="field span-6">
+            <label for="plateauDensity">Plateau density</label>
+            <div class="inline-pair">
+              <input id="plateauDensity" type="number" min="0" step="any" />
+              <div class="unit-chip" id="densityUnitChip">/m³</div>
+            </div>
+            <small>Absolute density in the currently selected unit.</small>
+          </div>
+
+          <div class="field span-6">
+            <label for="plateauMultiple">Plateau density (× n<sub>c</sub>)</label>
+            <input id="plateauMultiple" type="number" min="0" step="any" />
+            <small>Edit either field and the other one updates automatically.</small>
+          </div>
+
+          <div class="field span-3">
+            <label for="profileStartX">Left ramp start position (μm)</label>
+            <input id="profileStartX" type="number" step="any" value="10" />
+          </div>
+
+          <div class="field span-3">
+            <label for="plateauLength">Plateau length (μm)</label>
+            <input id="plateauLength" type="number" min="0.001" step="any" value="40" />
+          </div>
+
+          <div class="field span-3">
+            <label for="chDensity">CH mass density (g/cm³)</label>
+            <input id="chDensity" type="number" min="0.001" step="any" value="1.05" />
+          </div>
+
+
+          <div class="field span-6">
+            <div class="group-card">
+              <h3>Left side</h3>
+              <p class="group-note">Control the rise from vacuum into the plateau.</p>
+
+              <div class="inner-grid">
+                <div class="option-box span-12">
+                  <div class="switch-tile">
+                    <div class="switch-meta">
+                      <div class="field-title">Enable left ramp</div>
+                      <div class="micro-note">When disabled, the profile jumps directly from 0 to the plateau at the start position.</div>
+                    </div>
+                    <input id="leftRampEnabled" type="checkbox" checked />
+                  </div>
+                </div>
+
+                <div class="field span-6">
+                  <label for="riseLength">Left ramp length (μm)</label>
+                  <input id="riseLength" type="number" min="0.001" step="any" value="20" />
+                </div>
+
+                <div class="field span-6">
+                  <label for="riseMode">Left ramp mode</label>
+                  <select id="riseMode">
+                    <option value="linear">Linear rise</option>
+                    <option value="exp" selected>Exponential rise</option>
+                  </select>
+                </div>
+
+                <div class="span-12">
+                  <div class="mode-block" id="riseExpBlock">
+                    <div class="field">
+                      <label for="riseExpMode">Exponential rise constraint</label>
+                      <select id="riseExpMode">
+                        <option value="nc" selected>Reach n_c after a chosen distance</option>
+                        <option value="area">Equivalent rectangle particle count</option>
+                      </select>
+                    </div>
+
+                    <div class="field" id="riseNcField" style="margin-top: 12px;">
+                      <label for="riseNcDistance">Distance to reach n_c (μm)</label>
+                      <input id="riseNcDistance" type="number" min="0.001" step="any" value="12" />
+                      <small>Measured from the left-ramp start position.</small>
+                    </div>
+
+                    <div class="field" id="riseAreaField" style="display:none; margin-top: 12px;">
+                      <label for="riseEqWidth">Equivalent rectangle width (μm)</label>
+                      <input id="riseEqWidth" type="number" min="0.001" step="any" value="8" />
+                      <small>The exponential ramp contains the same particles as a rectangle of width \(w_\mathrm{eq}\) and height \(n_p\).</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field span-6">
+            <div class="group-card">
+              <h3>Right side</h3>
+              <p class="group-note">Control the decay from the plateau back into vacuum.</p>
+
+              <div class="inner-grid">
+                <div class="option-box span-12">
+                  <div class="switch-tile">
+                    <div class="switch-meta">
+                      <div class="field-title">Enable right ramp</div>
+                      <div class="micro-note">When disabled, the profile drops vertically from the plateau to 0 at the right plateau edge.</div>
+                    </div>
+                    <input id="rightRampEnabled" type="checkbox" checked />
+                  </div>
+                </div>
+
+                <div class="field span-6">
+                  <label for="decayLength">Right ramp length (μm)</label>
+                  <input id="decayLength" type="number" min="0.001" step="any" value="15" />
+                </div>
+
+                <div class="field span-6">
+                  <label for="decayMode">Right ramp mode</label>
+                  <select id="decayMode">
+                    <option value="linear">Linear decay</option>
+                    <option value="exp" selected>Exponential decay</option>
+                  </select>
+                </div>
+
+                <div class="span-12">
+                  <div class="mode-block" id="decayExpBlock">
+                    <div class="field">
+                      <label for="decayExpMode">Exponential decay constraint</label>
+                      <select id="decayExpMode">
+                        <option value="nc" selected>Drop to n_c after a chosen distance</option>
+                        <option value="area">Equivalent rectangle particle count</option>
+                      </select>
+                    </div>
+
+                    <div class="field" id="decayNcField" style="margin-top: 12px;">
+                      <label for="decayNcDistance">Distance to drop to n_c (μm)</label>
+                      <input id="decayNcDistance" type="number" min="0.001" step="any" value="5" />
+                      <small>Measured from the right-ramp start position.</small>
+                    </div>
+
+                    <div class="field" id="decayAreaField" style="display:none; margin-top: 12px;">
+                      <label for="decayEqWidth">Equivalent rectangle width (μm)</label>
+                      <input id="decayEqWidth" type="number" min="0.001" step="any" value="6" />
+                      <small>The exponential ramp contains the same particles as a rectangle of width \(w_\mathrm{eq}\) and height \(n_p\).</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel charts-panel">
+        <div class="section-header">
+          <div>
+            <h2>Plots</h2>
+            <p class="subtle">Choose whether the image buttons copy to the clipboard or export to local files. Both PNG and SVG follow the selected action mode, and you can also export the plotted data as a NumPy .npz package.</p>
+          </div>
+          <div class="charts-header-actions">
+            <div class="header-mode-box">
+              <span class="header-mode-label">Image action mode</span>
+              <div class="segmented" id="actionModeSegment">
+                <button type="button" data-actionmode="copy" class="active">Copy</button>
+                <button type="button" data-actionmode="export">Export</button>
+              </div>
+            </div>
+            <button class="action-btn secondary" type="button" id="linearPngBtn">Copy linear PNG</button>
+            <button class="action-btn secondary" type="button" id="linearSvgBtn">Copy linear SVG</button>
+            <button class="action-btn secondary" type="button" id="logPngBtn">Copy log PNG</button>
+            <button class="action-btn secondary" type="button" id="logSvgBtn">Copy log SVG</button>
+            <button class="action-btn secondary" type="button" id="exportDataBtn">Export data (.npz)</button>
+            <button class="action-btn orange" type="button" id="resetDefaultsBtn">Reset defaults</button>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <article class="chart-card">
+            <div class="chart-meta">
+              <div class="chart-name">Linear scale</div>
+              <div class="chart-unit" id="linearUnitLabel">Density in /m³</div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="linearChart"></canvas>
+            </div>
+            <div class="caption">Best for checking absolute plateau values, ramp lengths, and integrated particle count.</div>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-meta">
+              <div class="chart-name">Log scale</div>
+              <div class="chart-unit" id="logUnitLabel">Density in /m³</div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="logChart"></canvas>
+            </div>
+            <div class="caption">Best for inspecting the low-density region and the left/right \(n_c\) crossing locations.</div>
+          </article>
+        </div>
+
+        <div class="chart-controls-shell">
+          <h3>Plot appearance and x-axis display range</h3>
+          <div class="chart-controls-grid">
+            <div class="field span-3">
+              <label>Annotations</label>
+              <div class="segmented" id="annotationSegment">
+                <button type="button" data-annot="off" class="active">Off</button>
+                <button type="button" data-annot="on">On</button>
+              </div>
+            </div>
+
+            <div class="field span-3">
+              <label for="lineColor">Line color</label>
+              <input id="lineColor" type="color" value="#1f77b4" />
+            </div>
+
+            <div class="field span-2">
+              <label for="lineWidth">Line width</label>
+              <input id="lineWidth" type="number" min="0.5" max="8" step="0.1" value="2.8" />
+            </div>
+
+            <div class="field span-2">
+              <label for="lineStyle">Line style</label>
+              <select id="lineStyle">
+                <option value="solid" selected>Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+                <option value="dashdot">Dash-dot</option>
+              </select>
+            </div>
+
+            <div class="field span-2">
+              <label for="fillOpacity">Fill opacity</label>
+              <input id="fillOpacity" type="number" min="0" max="0.5" step="0.01" value="0.10" />
+            </div>
+
+            <div class="field span-3">
+              <label for="samples">Sampling points</label>
+              <input id="samples" type="number" min="300" max="8000" step="100" value="1800" />
+              <small>Only affects curve smoothness and export detail. Derived values stay analytic.</small>
+            </div>
+
+            <div class="field span-3">
+              <label for="xDisplayMin">x-axis min (μm)</label>
+              <input id="xDisplayMin" type="number" step="any" value="0" />
+            </div>
+
+            <div class="field span-3">
+              <label for="xDisplayMax">x-axis max (μm)</label>
+              <input id="xDisplayMax" type="number" step="any" value="100" />
+            </div>
+
+            <div class="field span-3">
+              <button class="action-btn primary" type="button" id="fitRangeBtn" style="margin-top: 22px;">Fit range to profile</button>
+            </div>
+
+            <div class="field span-3">
+              <small>Set a range wider than the profile to show vacuum regions, or tighter than the profile to crop the view.</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <h2>Derived values</h2>
+            <p class="subtle">These derived values are rendered with LaTeX and update live from the current density, composition, and geometry.</p>
+          </div>
+        </div>
+
+        <div class="formula-grid">
+          <div class="formula-card">
+            <div class="metric-label">Critical density</div>
+            <div class="formula-content" id="metricNcFormula"></div>
+          </div>
+
+          <div class="formula-card">
+            <div class="metric-label">Plateau density</div>
+            <div class="formula-content" id="metricPlateauFormula"></div>
+          </div>
+
+          <div class="formula-card">
+            <div class="metric-label">Pure water</div>
+            <div class="formula-content" id="metricWaterFormula"></div>
+          </div>
+
+          <div class="formula-card">
+            <div class="metric-label">CH target</div>
+            <div class="formula-content" id="metricChFormula"></div>
+          </div>
+        </div>
+
+        <div class="footer-note">
+          Water and CH are shown as fully ionized reference electron densities. The CH estimate uses one carbon and one hydrogen atom per formula unit.
+        </div>
+      </section>
+
+      <section class="panel formula-panel">
+        <div class="section-header">
+          <div>
+            <h2>Latex summary</h2>
+            <p class="subtle">The profile definition, key crossing locations, and the total areal density \(\int n_e(x)\,\mathrm{d}x\) are all rendered live.</p>
+          </div>
+        </div>
+
+        <div class="formula-shell">
+          <div id="physicsMath"></div>
+          <div class="math-note">This block prints the 800 nm critical density, the current plateau density, and the reference solid-density estimates.</div>
+        </div>
+
+        <div class="formula-shell">
+          <div id="profileMath"></div>
+          <div id="statusList" class="status-list"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const PHYSICS = {
+      eps0: 8.8541878128e-12,
+      me: 9.1093837015e-31,
+      e: 1.602176634e-19,
+      c: 299792458,
+      lambda: 800e-9,
+      NA: 6.02214076e23
+    };
+
+    PHYSICS.nc = PHYSICS.eps0 * PHYSICS.me / (PHYSICS.e ** 2) * ((2 * Math.PI * PHYSICS.c / PHYSICS.lambda) ** 2);
+
+    const DEFAULTS = {
+      title: 'Plasma density profile',
+      yUnit: 'm3',
+      bg: 'white',
+      plateauMultiplier: 100,
+      profileStartX: 10,
+      leftRampEnabled: true,
+      rightRampEnabled: true,
+      riseLength: 20,
+      plateauLength: 40,
+      decayLength: 15,
+      riseMode: 'exp',
+      riseExpMode: 'nc',
+      riseNcDistance: 12,
+      riseEqWidth: 8,
+      decayMode: 'exp',
+      decayExpMode: 'nc',
+      decayNcDistance: 5,
+      decayEqWidth: 6,
+      chDensity: 1.05,
+      samples: 1800,
+      annotations: 'off',
+      lineColor: '#1f77b4',
+      lineWidth: 2.8,
+      lineStyle: 'solid',
+      fillOpacity: 0.10,
+      xDisplayMin: 0,
+      xDisplayMax: 100,
+      actionMode: 'copy'
+    };
+
+    const state = { ...DEFAULTS, plateauDensitySI: DEFAULTS.plateauMultiplier * PHYSICS.nc };
+
+    const dom = {
+      plotTitle: document.getElementById('plotTitle'),
+      plateauDensity: document.getElementById('plateauDensity'),
+      plateauMultiple: document.getElementById('plateauMultiple'),
+      densityUnitChip: document.getElementById('densityUnitChip'),
+      profileStartX: document.getElementById('profileStartX'),
+      leftRampEnabled: document.getElementById('leftRampEnabled'),
+      rightRampEnabled: document.getElementById('rightRampEnabled'),
+      riseLength: document.getElementById('riseLength'),
+      plateauLength: document.getElementById('plateauLength'),
+      decayLength: document.getElementById('decayLength'),
+      riseMode: document.getElementById('riseMode'),
+      riseExpMode: document.getElementById('riseExpMode'),
+      riseNcDistance: document.getElementById('riseNcDistance'),
+      riseEqWidth: document.getElementById('riseEqWidth'),
+      decayMode: document.getElementById('decayMode'),
+      decayExpMode: document.getElementById('decayExpMode'),
+      decayNcDistance: document.getElementById('decayNcDistance'),
+      decayEqWidth: document.getElementById('decayEqWidth'),
+      riseExpBlock: document.getElementById('riseExpBlock'),
+      decayExpBlock: document.getElementById('decayExpBlock'),
+      riseNcField: document.getElementById('riseNcField'),
+      riseAreaField: document.getElementById('riseAreaField'),
+      decayNcField: document.getElementById('decayNcField'),
+      decayAreaField: document.getElementById('decayAreaField'),
+      chDensity: document.getElementById('chDensity'),
+      samples: document.getElementById('samples'),
+      unitSegment: document.getElementById('unitSegment'),
+      bgSegment: document.getElementById('bgSegment'),
+      annotationSegment: document.getElementById('annotationSegment'),
+      actionModeSegment: document.getElementById('actionModeSegment'),
+      metricNcFormula: document.getElementById('metricNcFormula'),
+      metricPlateauFormula: document.getElementById('metricPlateauFormula'),
+      metricWaterFormula: document.getElementById('metricWaterFormula'),
+      metricChFormula: document.getElementById('metricChFormula'),
+      physicsMath: document.getElementById('physicsMath'),
+      profileMath: document.getElementById('profileMath'),
+      statusList: document.getElementById('statusList'),
+      linearUnitLabel: document.getElementById('linearUnitLabel'),
+      logUnitLabel: document.getElementById('logUnitLabel'),
+      linearPngBtn: document.getElementById('linearPngBtn'),
+      linearSvgBtn: document.getElementById('linearSvgBtn'),
+      logPngBtn: document.getElementById('logPngBtn'),
+      logSvgBtn: document.getElementById('logSvgBtn'),
+      exportDataBtn: document.getElementById('exportDataBtn'),
+      resetDefaultsBtn: document.getElementById('resetDefaultsBtn'),
+      fitRangeBtn: document.getElementById('fitRangeBtn'),
+      lineColor: document.getElementById('lineColor'),
+      lineWidth: document.getElementById('lineWidth'),
+      lineStyle: document.getElementById('lineStyle'),
+      fillOpacity: document.getElementById('fillOpacity'),
+      xDisplayMin: document.getElementById('xDisplayMin'),
+      xDisplayMax: document.getElementById('xDisplayMax'),
+      toast: document.getElementById('toast')
+    };
+
+    let charts = {};
+    let syncLock = false;
+    let latestProfile = null;
+    let latestChartState = { linear: null, log: null };
+    let mathRenderToken = 0;
+    const tex = String.raw;
+
+    function clampPositive(value, fallback, min = 1e-12) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return fallback;
+      return Math.max(num, min);
+    }
+
+    function clampFinite(value, fallback) {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : fallback;
+    }
+
+    function formatSci(value, digits = 4) {
+      if (!Number.isFinite(value)) return '—';
+      if (value === 0) return '0';
+      const exp = Math.floor(Math.log10(Math.abs(value)));
+      const mant = value / (10 ** exp);
+      return `${mant.toFixed(digits)} × 10^${exp}`;
+    }
+
+    function formatRatio(value, digits = 4) {
+      if (!Number.isFinite(value)) return '—';
+      if (Math.abs(value) >= 100) return value.toFixed(1);
+      if (Math.abs(value) >= 10) return value.toFixed(2);
+      return value.toFixed(digits);
+    }
+
+    function latexNumber(value, digits = 4) {
+      if (!Number.isFinite(value) || value === 0) return '0';
+      const exp = Math.floor(Math.log10(Math.abs(value)));
+      const mant = value / (10 ** exp);
+      return `${mant.toFixed(digits)} \\times 10^{${exp}}`;
+    }
+
+    function trimNumericString(str) {
+      return String(str)
+        .replace(/(\.\d*?[1-9])0+(e[+\-]?\d+)?$/i, '$1$2')
+        .replace(/\.0+(e[+\-]?\d+)?$/i, '$1')
+        .replace(/e\+?/i, 'e');
+    }
+
+    function formatEditableNumber(value, { digits = 6, scientific = false } = {}) {
+      if (!Number.isFinite(value)) return '';
+      if (value === 0) return '0';
+      if (scientific || Math.abs(value) >= 1e5 || Math.abs(value) < 1e-3) {
+        return trimNumericString(value.toExponential(digits));
+      }
+      return trimNumericString(value.toFixed(digits));
+    }
+
+    function parseNonNegativeInput(rawValue) {
+      const raw = String(rawValue ?? '').trim();
+      if (!raw) return null;
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < 0) return null;
+      return value;
+    }
+
+    function formatPlateauDensityInput() {
+      return formatEditableNumber(toDisplayDensity(state.plateauDensitySI), { digits: 6, scientific: true });
+    }
+
+    function formatPlateauMultipleInput() {
+      return formatEditableNumber(state.plateauDensitySI / PHYSICS.nc, { digits: 6, scientific: false });
+    }
+
+    function densityUnitText() {
+      return state.yUnit === 'm3' ? '/m³' : '/cm³';
+    }
+
+    function densityUnitLatex() {
+      return state.yUnit === 'm3' ? '\\mathrm{m^{-3}}' : '\\mathrm{cm^{-3}}';
+    }
+
+    function toDisplayDensity(si) {
+      return state.yUnit === 'm3' ? si : si / 1e6;
+    }
+
+    function fromDisplayDensity(displayValue) {
+      return state.yUnit === 'm3' ? displayValue : displayValue * 1e6;
+    }
+
+    function waterElectronDensitySI() {
+      const rho = 1000;
+      const molarMass = 18.01528e-3;
+      return 10 * rho / molarMass * PHYSICS.NA;
+    }
+
+    function chElectronDensitySI(chDensityGcm3) {
+      const rho = chDensityGcm3 * 1000;
+      const molarMass = 13e-3;
+      return 7 * rho / molarMass * PHYSICS.NA;
+    }
+
+    function areaFraction(alpha) {
+      if (Math.abs(alpha) < 1e-10) return 0.5;
+      const ea = Math.exp(alpha);
+      return (1 / alpha) - 1 / (ea - 1);
+    }
+
+    function normalizedExp(t, alpha) {
+      if (t <= 0) return 0;
+      if (t >= 1) return 1;
+      if (Math.abs(alpha) < 1e-10) return t;
+      const ea = Math.exp(alpha);
+      return (Math.exp(alpha * t) - 1) / (ea - 1);
+    }
+
+    function solveMonotone(targetFn, target, low = -40, high = 40, iterations = 120) {
+      let lo = low;
+      let hi = high;
+      let flo = targetFn(lo) - target;
+      let fhi = targetFn(hi) - target;
+
+      if (!Number.isFinite(flo) || !Number.isFinite(fhi)) return null;
+      if (flo === 0) return lo;
+      if (fhi === 0) return hi;
+      if (flo * fhi > 0) return null;
+
+      for (let i = 0; i < iterations; i += 1) {
+        const mid = 0.5 * (lo + hi);
+        const fm = targetFn(mid) - target;
+        if (Math.abs(fm) < 1e-12) return mid;
+        if (flo * fm <= 0) {
+          hi = mid;
+          fhi = fm;
+        } else {
+          lo = mid;
+          flo = fm;
+        }
+      }
+      return 0.5 * (lo + hi);
+    }
+
+    function lineDash(style) {
+      if (style === 'dashed') return [12, 7];
+      if (style === 'dotted') return [2, 6];
+      if (style === 'dashdot') return [12, 6, 2, 6];
+      return [];
+    }
+
+    function hexToRgb(hex) {
+      const cleaned = (hex || '#1f77b4').replace('#', '');
+      const normalized = cleaned.length === 3
+        ? cleaned.split('').map(c => c + c).join('')
+        : cleaned.padEnd(6, '0').slice(0, 6);
+      const intVal = parseInt(normalized, 16);
+      return {
+        r: (intVal >> 16) & 255,
+        g: (intVal >> 8) & 255,
+        b: intVal & 255
+      };
+    }
+
+    function rgbaFromHex(hex, alpha) {
+      const { r, g, b } = hexToRgb(hex);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function svgEscape(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    function niceLinearTicks(min, max, target = 6) {
+      const span = Math.max(max - min, 1e-12);
+      const rough = span / Math.max(target, 1);
+      const exp = Math.floor(Math.log10(Math.abs(rough)));
+      const base = rough / (10 ** exp);
+      let step = 1;
+      if (base > 1 && base <= 2) step = 2;
+      else if (base > 2 && base <= 5) step = 5;
+      else if (base > 5) step = 10;
+      step *= 10 ** exp;
+
+      const ticks = [];
+      const start = Math.ceil(min / step) * step;
+      for (let value = start; value <= max + step * 0.5; value += step) {
+        ticks.push(Number(value.toPrecision(12)));
+      }
+      if (min === 0 && !ticks.includes(0)) ticks.unshift(0);
+      return ticks.filter((value) => value >= min - step * 1e-6 && value <= max + step * 1e-6);
+    }
+
+    function niceLogTicks(min, max) {
+      const ticks = [];
+      const start = Math.ceil(Math.log10(min));
+      const end = Math.floor(Math.log10(max));
+      for (let exp = start; exp <= end; exp += 1) {
+        ticks.push(10 ** exp);
+      }
+      return ticks;
+    }
+
+    function scientificTick(value) {
+      if (value === 0) return '0';
+      const exp = Math.floor(Math.log10(value));
+      const mant = value / 10 ** exp;
+      if (Math.abs(mant - 1) < 1e-8) return `1e${exp}`;
+      return `${mant.toFixed(1)}e${exp}`;
+    }
+
+    function renderSegmentButtons(container, activeValue, key) {
+      Array.from(container.querySelectorAll('button')).forEach((button) => {
+        const active = button.dataset[key] === activeValue;
+        button.classList.toggle('active', active);
+      });
+    }
+
+    function setStateFromInputs() {
+      state.title = dom.plotTitle.value;
+      state.profileStartX = clampFinite(dom.profileStartX.value, DEFAULTS.profileStartX);
+      state.leftRampEnabled = dom.leftRampEnabled.checked;
+      state.rightRampEnabled = dom.rightRampEnabled.checked;
+      state.riseLength = clampPositive(dom.riseLength.value, DEFAULTS.riseLength);
+      state.plateauLength = clampPositive(dom.plateauLength.value, DEFAULTS.plateauLength);
+      state.decayLength = clampPositive(dom.decayLength.value, DEFAULTS.decayLength);
+      state.riseMode = dom.riseMode.value;
+      state.riseExpMode = dom.riseExpMode.value;
+      state.riseNcDistance = clampPositive(dom.riseNcDistance.value, DEFAULTS.riseNcDistance);
+      state.riseEqWidth = clampPositive(dom.riseEqWidth.value, DEFAULTS.riseEqWidth);
+      state.decayMode = dom.decayMode.value;
+      state.decayExpMode = dom.decayExpMode.value;
+      state.decayNcDistance = clampPositive(dom.decayNcDistance.value, DEFAULTS.decayNcDistance);
+      state.decayEqWidth = clampPositive(dom.decayEqWidth.value, DEFAULTS.decayEqWidth);
+      state.chDensity = clampPositive(dom.chDensity.value, DEFAULTS.chDensity);
+      state.samples = Math.max(300, Math.min(8000, Math.round(clampPositive(dom.samples.value, DEFAULTS.samples))));
+      state.lineColor = dom.lineColor.value || DEFAULTS.lineColor;
+      state.lineWidth = Math.min(8, Math.max(0.5, clampPositive(dom.lineWidth.value, DEFAULTS.lineWidth, 0.5)));
+      state.lineStyle = dom.lineStyle.value;
+      state.fillOpacity = Math.min(0.5, Math.max(0, clampFinite(dom.fillOpacity.value, DEFAULTS.fillOpacity)));
+      state.xDisplayMin = clampFinite(dom.xDisplayMin.value, DEFAULTS.xDisplayMin);
+      state.xDisplayMax = clampFinite(dom.xDisplayMax.value, DEFAULTS.xDisplayMax);
+
+      if (state.xDisplayMax <= state.xDisplayMin) {
+        state.xDisplayMax = state.xDisplayMin + 1;
+        dom.xDisplayMax.value = state.xDisplayMax;
+      }
+
+      dom.riseExpBlock.style.display = state.leftRampEnabled && state.riseMode === 'exp' ? 'block' : 'none';
+      dom.decayExpBlock.style.display = state.rightRampEnabled && state.decayMode === 'exp' ? 'block' : 'none';
+      dom.riseNcField.style.display = state.riseExpMode === 'nc' ? 'block' : 'none';
+      dom.riseAreaField.style.display = state.riseExpMode === 'area' ? 'block' : 'none';
+      dom.decayNcField.style.display = state.decayExpMode === 'nc' ? 'block' : 'none';
+      dom.decayAreaField.style.display = state.decayExpMode === 'area' ? 'block' : 'none';
+
+      dom.densityUnitChip.textContent = densityUnitText();
+      dom.riseLength.disabled = !state.leftRampEnabled;
+      dom.riseMode.disabled = !state.leftRampEnabled;
+      dom.decayLength.disabled = !state.rightRampEnabled;
+      dom.decayMode.disabled = !state.rightRampEnabled;
+
+      renderSegmentButtons(dom.unitSegment, state.yUnit, 'unit');
+      renderSegmentButtons(dom.bgSegment, state.bg, 'bg');
+      renderSegmentButtons(dom.annotationSegment, state.annotations, 'annot');
+    }
+
+    function riseAlpha(params, statusMessages) {
+      if (!params.leftRampEnabled || params.riseMode !== 'exp') return { alpha: 0, fallback: false };
+      if (params.riseExpMode === 'area') {
+        const fraction = params.riseEqWidth / params.riseLength;
+        if (!(fraction > 0 && fraction < 1)) {
+          statusMessages.push('The left exponential equivalent rectangle width must stay between 0 and the left ramp length. The left ramp falls back to linear.');
+          return { alpha: 0, fallback: true };
+        }
+        const alpha = solveMonotone(areaFraction, fraction);
+        if (alpha === null) {
+          statusMessages.push('The left exponential area constraint could not be solved. The left ramp falls back to linear.');
+          return { alpha: 0, fallback: true };
+        }
+        return { alpha, fallback: false };
+      }
+
+      const tNc = params.riseNcDistance / params.riseLength;
+      const ratio = PHYSICS.nc / params.plateauDensitySI;
+      if (!(tNc > 0 && tNc < 1)) {
+        statusMessages.push('The left-ramp distance to reach n_c must lie strictly inside the left ramp. The left ramp falls back to linear.');
+        return { alpha: 0, fallback: true };
+      }
+      if (!(ratio > 0 && ratio < 1)) {
+        statusMessages.push('The plateau density must be larger than n_c to enforce a left-ramp n_c crossing. The left ramp falls back to linear.');
+        return { alpha: 0, fallback: true };
+      }
+      const alpha = solveMonotone((a) => normalizedExp(tNc, a), ratio);
+      if (alpha === null) {
+        statusMessages.push('The left exponential n_c-crossing constraint could not be solved. The left ramp falls back to linear.');
+        return { alpha: 0, fallback: true };
+      }
+      return { alpha, fallback: false };
+    }
+
+    function decayAlpha(params, statusMessages) {
+      if (!params.rightRampEnabled || params.decayMode !== 'exp') return { alpha: 0, fallback: false };
+      if (params.decayExpMode === 'area') {
+        const fraction = params.decayEqWidth / params.decayLength;
+        if (!(fraction > 0 && fraction < 1)) {
+          statusMessages.push('The right exponential equivalent rectangle width must stay between 0 and the right ramp length. The right ramp falls back to linear.');
+          return { alpha: 0, fallback: true };
+        }
+        const alpha = solveMonotone(areaFraction, fraction);
+        if (alpha === null) {
+          statusMessages.push('The right exponential area constraint could not be solved. The right ramp falls back to linear.');
+          return { alpha: 0, fallback: true };
+        }
+        return { alpha, fallback: false };
+      }
+
+      const tNc = params.decayNcDistance / params.decayLength;
+      const ratio = PHYSICS.nc / params.plateauDensitySI;
+      if (!(tNc > 0 && tNc < 1)) {
+        statusMessages.push('The right-ramp distance to drop to n_c must lie strictly inside the right ramp. The right ramp falls back to linear.');
+        return { alpha: 0, fallback: true };
+      }
+      if (!(ratio > 0 && ratio < 1)) {
+        statusMessages.push('The plateau density must be larger than n_c to enforce a right-ramp n_c crossing. The right ramp falls back to linear.');
+        return { alpha: 0, fallback: true };
+      }
+      const alpha = solveMonotone((a) => normalizedExp(1 - tNc, a), ratio);
+      if (alpha === null) {
+        statusMessages.push('The right exponential n_c-crossing constraint could not be solved. The right ramp falls back to linear.');
+        return { alpha: 0, fallback: true };
+      }
+      return { alpha, fallback: false };
+    }
+
+    function rampAreaFactor(enabled, mode, alpha, effectiveMode) {
+      if (!enabled) return 0;
+      if (effectiveMode === 'linear') return 0.5;
+      return areaFraction(alpha);
+    }
+
+    function expCrossingFraction(ratio, alpha) {
+      if (!(ratio > 0 && ratio < 1)) return null;
+      if (Math.abs(alpha) < 1e-10) return ratio;
+      const value = 1 + ratio * (Math.exp(alpha) - 1);
+      if (!(value > 0)) return null;
+      return Math.log(value) / alpha;
+    }
+
+    function computeNCrossings(params, effectiveRiseMode, alphaL, effectiveDecayMode, alphaR, plateauStart, plateauEnd, statusMessages) {
+      const ratio = PHYSICS.nc / params.plateauDensitySI;
+      const result = {
+        ratio,
+        left: null,
+        right: null,
+        plateauMid: 0.5 * (plateauStart + plateauEnd)
+      };
+
+      if (!(ratio > 0 && ratio <= 1)) {
+        statusMessages.push('The plateau density is not above n_c, so the usual left/right n_c ramp crossings are not defined.');
+        return result;
+      }
+
+      if (params.leftRampEnabled) {
+        if (effectiveRiseMode === 'linear') {
+          result.left = params.profileStartX + params.riseLength * ratio;
+        } else {
+          const frac = expCrossingFraction(ratio, alphaL);
+          if (frac !== null) result.left = params.profileStartX + params.riseLength * frac;
+        }
+      } else {
+        statusMessages.push('The left ramp is disabled, so there is no continuous left-side n_c crossing to annotate.');
+      }
+
+      if (params.rightRampEnabled) {
+        if (effectiveDecayMode === 'linear') {
+          result.right = plateauEnd + params.decayLength * (1 - ratio);
+        } else {
+          const frac = expCrossingFraction(ratio, alphaR);
+          if (frac !== null) result.right = plateauEnd + params.decayLength * (1 - frac);
+        }
+      } else {
+        statusMessages.push('The right ramp is disabled, so there is no continuous right-side n_c crossing to annotate.');
+      }
+
+      return result;
+    }
+
+    function buildDensityProfile(params) {
+      const statusMessages = [];
+      const riseSolution = riseAlpha(params, statusMessages);
+      const decaySolution = decayAlpha(params, statusMessages);
+      const alphaL = riseSolution.alpha;
+      const alphaR = decaySolution.alpha;
+      const effectiveRiseMode = (params.leftRampEnabled && params.riseMode === 'exp' && riseSolution.fallback) ? 'linear' : params.riseMode;
+      const effectiveDecayMode = (params.rightRampEnabled && params.decayMode === 'exp' && decaySolution.fallback) ? 'linear' : params.decayMode;
+
+      const leftRampLength = params.leftRampEnabled ? params.riseLength : 0;
+      const rightRampLength = params.rightRampEnabled ? params.decayLength : 0;
+
+      const plateauStart = params.profileStartX + leftRampLength;
+      const plateauEnd = plateauStart + params.plateauLength;
+      const profileEnd = plateauEnd + rightRampLength;
+
+      const xMinData = Math.min(params.xDisplayMin, params.profileStartX - Math.max(5, 0.05 * Math.max(profileEnd - params.profileStartX, 20)));
+      const xMaxData = Math.max(params.xDisplayMax, profileEnd + Math.max(5, 0.08 * Math.max(profileEnd - params.profileStartX, 20)));
+      const nPoints = Math.round(params.samples);
+
+      const x = [];
+      const ySI = [];
+
+      for (let i = 0; i < nPoints; i += 1) {
+        const xi = xMinData + (xMaxData - xMinData) * i / (nPoints - 1);
+        let yi = 0;
+
+        if (params.leftRampEnabled && xi >= params.profileStartX && xi <= plateauStart) {
+          const t = params.riseLength > 0 ? (xi - params.profileStartX) / params.riseLength : 1;
+          if (effectiveRiseMode === 'linear') {
+            yi = params.plateauDensitySI * t;
+          } else {
+            yi = params.plateauDensitySI * normalizedExp(t, alphaL);
+          }
+        } else if (!params.leftRampEnabled && xi >= params.profileStartX && xi <= plateauStart) {
+          yi = params.plateauDensitySI;
+        } else if (xi > plateauStart && xi <= plateauEnd) {
+          yi = params.plateauDensitySI;
+        } else if (params.rightRampEnabled && xi >= plateauEnd && xi <= profileEnd) {
+          const t = params.decayLength > 0 ? (xi - plateauEnd) / params.decayLength : 1;
+          if (effectiveDecayMode === 'linear') {
+            yi = params.plateauDensitySI * Math.max(0, 1 - t);
+          } else {
+            yi = params.plateauDensitySI * normalizedExp(1 - t, alphaR);
+          }
+        } else {
+          yi = 0;
+        }
+
+        x.push(xi);
+        ySI.push(Math.max(yi, 0));
+      }
+
+      const areaDimensionless = rampAreaFactor(params.leftRampEnabled, params.riseMode, alphaL, effectiveRiseMode) * params.riseLength
+        + params.plateauLength
+        + rampAreaFactor(params.rightRampEnabled, params.decayMode, alphaR, effectiveDecayMode) * params.decayLength;
+
+      const arealDensitySI = params.plateauDensitySI * areaDimensionless * 1e-6;
+      const crossings = computeNCrossings(params, effectiveRiseMode, alphaL, effectiveDecayMode, alphaR, plateauStart, plateauEnd, statusMessages);
+
+      return {
+        x,
+        ySI,
+        alphaL,
+        alphaR,
+        effectiveRiseMode,
+        effectiveDecayMode,
+        statusMessages,
+        profileStartX: params.profileStartX,
+        plateauStart,
+        plateauEnd,
+        profileEnd,
+        areaDimensionless,
+        arealDensitySI,
+        arealDensityCM2: arealDensitySI / 1e4,
+        crossings,
+        plateauMidX: crossings.plateauMid
+      };
+    }
+
+    function annotationPlugin() {
+      return {
+        id: 'profileAnnotations',
+        afterDatasetsDraw(chart) {
+          if (state.annotations !== 'on' || !latestProfile) return;
+
+          const { ctx, chartArea, scales } = chart;
+          if (!chartArea || !scales.x || !scales.y) return;
+
+          const ratio = latestProfile.crossings.ratio;
+          if (!(ratio > 0 && ratio <= 1)) return;
+
+          const xScale = scales.x;
+          const yScale = scales.y;
+          const plateauDisplay = toDisplayDensity(state.plateauDensitySI);
+          const plateauYForLinear = Math.min(plateauDisplay, yScale.max || plateauDisplay);
+          const plateauY = yScale.type === 'logarithmic'
+            ? Math.max(toDisplayDensity(PHYSICS.nc) * 2.2, plateauDisplay / 1.35)
+            : Math.min((yScale.max || plateauYForLinear) * 0.94, plateauYForLinear);
+
+          ctx.save();
+
+          function roundRect(x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+          }
+
+          function drawLabel(text, px, py, align = 'center') {
+            ctx.font = '700 12px Inter, system-ui, sans-serif';
+            const padX = 8;
+            const padY = 6;
+            const textWidth = ctx.measureText(text).width;
+            const w = textWidth + padX * 2;
+            const h = 26;
+            let x = px - w / 2;
+            if (align === 'left') x = px;
+            if (align === 'right') x = px - w;
+            x = Math.max(chartArea.left + 4, Math.min(x, chartArea.right - w - 4));
+            const y = Math.max(chartArea.top + 4, Math.min(py, chartArea.bottom - h - 4));
+            roundRect(x, y, w, h, 9);
+            ctx.fillStyle = 'rgba(255,255,255,0.93)';
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = rgbaFromHex(state.lineColor, 0.32);
+            ctx.stroke();
+            ctx.fillStyle = '#24364b';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x + w / 2, y + h / 2 + 0.5);
+          }
+
+          function drawCrossing(xVal, label, topOffset) {
+            if (xVal === null || xVal < xScale.min || xVal > xScale.max) return;
+            const px = xScale.getPixelForValue(xVal);
+            const pyNc = yScale.getPixelForValue(Math.max(toDisplayDensity(PHYSICS.nc), yScale.min || toDisplayDensity(PHYSICS.nc)));
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = rgbaFromHex(state.lineColor, 0.65);
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(px, chartArea.top + 10);
+            ctx.lineTo(px, pyNc);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = state.lineColor;
+            ctx.beginPath();
+            ctx.arc(px, pyNc, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            drawLabel(label, px, chartArea.top + topOffset, 'center');
+          }
+
+          const plateauPx = xScale.getPixelForValue(latestProfile.plateauMidX);
+          const plateauPy = yScale.getPixelForValue(Math.max(plateauY, yScale.min || plateauY));
+          drawLabel(`plateau = ${formatRatio(state.plateauDensitySI / PHYSICS.nc, 4)} n_c`, plateauPx, plateauPy - 34);
+          drawCrossing(latestProfile.crossings.left, `left n_c: x = ${latestProfile.crossings.left?.toFixed(3)} μm`, 10);
+          drawCrossing(latestProfile.crossings.right, `right n_c: x = ${latestProfile.crossings.right?.toFixed(3)} μm`, 42);
+
+          ctx.restore();
+        }
+      };
+    }
+
+    function baseChartConfig(scaleType = 'linear') {
+      return {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: 'n_e',
+            data: [],
+            borderColor: state.lineColor,
+            borderWidth: state.lineWidth,
+            borderDash: lineDash(state.lineStyle),
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0,
+            fill: true,
+            backgroundColor: rgbaFromHex(state.lineColor, state.fillOpacity),
+            clip: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: { mode: 'nearest', intersect: false },
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: '',
+              color: '#24364b',
+              font: { size: 16, weight: '700' },
+              padding: { bottom: 18 }
+            },
+            tooltip: {
+              displayColors: false,
+              backgroundColor: 'rgba(18,29,46,0.94)',
+              titleColor: '#ffffff',
+              bodyColor: '#ffffff',
+              padding: 12,
+              callbacks: {
+                title: (items) => `x = ${items[0].parsed.x.toFixed(3)} μm`,
+                label: (ctx) => `n_e = ${formatSci(ctx.parsed.y, 4)} ${densityUnitText()}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              title: {
+                display: true,
+                text: 'Position x (μm)',
+                color: '#607289',
+                font: { size: 13, weight: '700' }
+              },
+              ticks: { color: '#607289' },
+              grid: { color: '#e5ecf4' },
+              border: { color: '#d6dee8' }
+            },
+            y: {
+              type: scaleType,
+              title: {
+                display: true,
+                text: `Plasma density (${densityUnitText()})`,
+                color: '#607289',
+                font: { size: 13, weight: '700' }
+              },
+              ticks: {
+                color: '#607289',
+                callback: scientificTick
+              },
+              grid: { color: '#e5ecf4' },
+              border: { color: '#d6dee8' }
+            }
+          }
+        },
+        plugins: [annotationPlugin()]
+      };
+    }
+
+    function createCharts() {
+      charts.linear = new Chart(document.getElementById('linearChart').getContext('2d'), baseChartConfig('linear'));
+      charts.log = new Chart(document.getElementById('logChart').getContext('2d'), baseChartConfig('logarithmic'));
+    }
+
+    function buildDisplaySeries(profile) {
+      const dataLinear = profile.x.map((xi, idx) => ({ x: xi, y: toDisplayDensity(profile.ySI[idx]) }));
+      const displayMax = Math.max(...dataLinear.map((point) => point.y), 1);
+      const ncDisplay = toDisplayDensity(PHYSICS.nc);
+      const minLog = Math.max(displayMax * 1e-8, ncDisplay * 1e-4, state.yUnit === 'm3' ? 1e10 : 1e4);
+      const dataLog = profile.x.map((xi, idx) => {
+        const y = toDisplayDensity(profile.ySI[idx]);
+        if (y <= 0) return { x: xi, y: null };
+        return { x: xi, y: Math.max(y, minLog) };
+      });
+      return { dataLinear, dataLog, displayMax, minLog };
+    }
+
+    function updateChartData(profile) {
+      latestProfile = profile;
+      const title = state.title.trim() || DEFAULTS.title;
+      const { dataLinear, dataLog, displayMax, minLog } = buildDisplaySeries(profile);
+
+      latestChartState.linear = {
+        which: 'linear',
+        scaleType: 'linear',
+        title: `${title} — linear scale`,
+        data: dataLinear,
+        xMin: state.xDisplayMin,
+        xMax: state.xDisplayMax,
+        yMin: 0,
+        yMax: displayMax * 1.08,
+        displayMax,
+        minLog,
+        ncDisplay: toDisplayDensity(PHYSICS.nc)
+      };
+
+      latestChartState.log = {
+        which: 'log',
+        scaleType: 'logarithmic',
+        title: `${title} — log scale`,
+        data: dataLog,
+        xMin: state.xDisplayMin,
+        xMax: state.xDisplayMax,
+        yMin: minLog,
+        yMax: Math.max(displayMax * 1.15, minLog * 10),
+        displayMax,
+        minLog,
+        ncDisplay: toDisplayDensity(PHYSICS.nc)
+      };
+
+      [charts.linear, charts.log].forEach((chart, index) => {
+        chart.data.datasets[0].data = index === 0 ? dataLinear : dataLog;
+        chart.data.datasets[0].borderColor = state.lineColor;
+        chart.data.datasets[0].borderWidth = state.lineWidth;
+        chart.data.datasets[0].borderDash = lineDash(state.lineStyle);
+        chart.data.datasets[0].backgroundColor = rgbaFromHex(state.lineColor, state.fillOpacity);
+        chart.options.plugins.title.text = `${title} — ${index === 0 ? 'linear scale' : 'log scale'}`;
+        chart.options.scales.y.title.text = `Plasma density (${densityUnitText()})`;
+        chart.options.scales.x.min = state.xDisplayMin;
+        chart.options.scales.x.max = state.xDisplayMax;
+        chart.options.scales.x.ticks.color = '#607289';
+        chart.options.scales.y.ticks.color = '#607289';
+      });
+
+      charts.linear.options.scales.y.min = latestChartState.linear.yMin;
+      charts.linear.options.scales.y.max = latestChartState.linear.yMax;
+      charts.log.options.scales.y.min = latestChartState.log.yMin;
+      charts.log.options.scales.y.max = latestChartState.log.yMax;
+
+      charts.linear.update();
+      charts.log.update();
+
+      dom.linearUnitLabel.textContent = `Density in ${densityUnitText()}`;
+      dom.logUnitLabel.textContent = `Density in ${densityUnitText()}`;
+    }
+
+    function setFormulaHTML(el, latex) {
+      el.innerHTML = latex;
+    }
+
+    async function typesetElements(elements) {
+      if (!(window.MathJax && window.MathJax.typesetPromise)) return;
+      if (window.MathJax.typesetClear) {
+        MathJax.typesetClear(elements);
+      }
+      const token = ++mathRenderToken;
+      await MathJax.typesetPromise(elements);
+      if (token !== mathRenderToken) return;
+    }
+
+    function updateDerivedValues() {
+      const ncSI = PHYSICS.nc;
+      const waterSI = waterElectronDensitySI();
+      const chSI = chElectronDensitySI(state.chDensity);
+
+      setFormulaHTML(dom.metricNcFormula, tex`
+        $$
+        \begin{aligned}
+        n_c &= ${latexNumber(ncSI)} \, \mathrm{m^{-3}} \\
+            &= ${latexNumber(ncSI / 1e6)} \, \mathrm{cm^{-3}}
+        \end{aligned}
+        $$
+      `);
+
+      setFormulaHTML(dom.metricPlateauFormula, tex`
+        $$
+        \begin{aligned}
+        n_p &= ${latexNumber(state.plateauDensitySI)} \, \mathrm{m^{-3}} \\
+            &= ${latexNumber(state.plateauDensitySI / 1e6)} \, \mathrm{cm^{-3}} \\
+        \frac{n_p}{n_c} &= ${formatRatio(state.plateauDensitySI / ncSI, 4)}
+        \end{aligned}
+        $$
+      `);
+
+      setFormulaHTML(dom.metricWaterFormula, tex`
+        $$
+        \begin{aligned}
+        n_{e,\mathrm{water}} &= ${latexNumber(waterSI)} \, \mathrm{m^{-3}} \\
+                              &= ${latexNumber(waterSI / 1e6)} \, \mathrm{cm^{-3}} \\
+        \frac{n_{e,\mathrm{water}}}{n_c} &= ${formatRatio(waterSI / ncSI, 4)}
+        \end{aligned}
+        $$
+      `);
+
+      setFormulaHTML(dom.metricChFormula, tex`
+        $$
+        \begin{aligned}
+        n_{e,\mathrm{CH}} &= ${latexNumber(chSI)} \, \mathrm{m^{-3}} \\
+                           &= ${latexNumber(chSI / 1e6)} \, \mathrm{cm^{-3}} \\
+        \frac{n_{e,\mathrm{CH}}}{n_c} &= ${formatRatio(chSI / ncSI, 4)} \\
+        \rho_{\mathrm{CH}} &= ${state.chDensity.toFixed(3)} \, \mathrm{g \, cm^{-3}}
+        \end{aligned}
+        $$
+      `);
+    }
+
+    function profilePieceLatex(profile) {
+      const L0 = state.profileStartX.toFixed(3);
+      const LL = state.riseLength.toFixed(3);
+      const LP = state.plateauLength.toFixed(3);
+      const LR = state.decayLength.toFixed(3);
+      const x1 = profile.plateauStart.toFixed(3);
+      const x2 = profile.plateauEnd.toFixed(3);
+      const x3 = profile.profileEnd.toFixed(3);
+
+      const leftExpr = !state.leftRampEnabled
+        ? '0'
+        : profile.effectiveRiseMode === 'linear'
+          ? tex`n_p \, \frac{x-x_0}{L_L}`
+          : tex`n_p \, \frac{e^{${profile.alphaL.toFixed(5)} \, (x-x_0)/L_L}-1}{e^{${profile.alphaL.toFixed(5)}}-1}`;
+
+      const rightExpr = !state.rightRampEnabled
+        ? '0'
+        : profile.effectiveDecayMode === 'linear'
+          ? tex`n_p \left(1-\frac{x-x_2}{L_R}\right)`
+          : tex`n_p \, \frac{e^{${profile.alphaR.toFixed(5)}\left(1-\frac{x-x_2}{L_R}\right)}-1}{e^{${profile.alphaR.toFixed(5)}}-1}`;
+
+      if (!state.leftRampEnabled && !state.rightRampEnabled) {
+        return tex`
+          $$
+          n_e(x) = \begin{cases}
+          n_p, & x_0 \le x \le x_2 \\
+          0, & \text{otherwise}
+          \end{cases}
+          $$
+
+          $$
+          \begin{aligned}
+          x_0 &= ${L0} \, \mu\mathrm{m} \\
+          x_2 &= ${x2} \, \mu\mathrm{m} \\
+          L_P &= ${LP} \, \mu\mathrm{m}
+          \end{aligned}
+          $$
+        `;
+      }
+
+      return tex`
+        $$
+        n_e(x)=
+        \begin{cases}
+        0, & x < x_0 \\
+        ${state.leftRampEnabled ? leftExpr : 'n_p'}, & x_0 \le x \le x_1 \\
+        n_p, & x_1 < x < x_2 \\
+        ${state.rightRampEnabled ? rightExpr : 'n_p'}, & x_2 \le x \le x_3 \\
+        0, & x > x_3
+        \end{cases}
+        $$
+
+        $$
+        \begin{aligned}
+        x_0 &= ${L0} \, \mu\mathrm{m}, & x_1 &= ${x1} \, \mu\mathrm{m} \\
+        x_2 &= ${x2} \, \mu\mathrm{m}, & x_3 &= ${x3} \, \mu\mathrm{m}
+        \end{aligned}
+        $$
+
+        $$
+        \begin{aligned}
+        L_L &= ${LL} \, \mu\mathrm{m}, & L_P &= ${LP} \, \mu\mathrm{m} \\
+        L_R &= ${LR} \, \mu\mathrm{m}
+        \end{aligned}
+        $$
+      `;
+    }
+
+    async function updateLatex(profile) {
+      const ncSI = PHYSICS.nc;
+      const waterSI = waterElectronDensitySI();
+      const chSI = chElectronDensitySI(state.chDensity);
+
+      const leftCrossLatex = profile.crossings.left === null
+        ? tex`\text{not available}`
+        : tex`${profile.crossings.left.toFixed(4)} \, \mu\mathrm{m}`;
+
+      const rightCrossLatex = profile.crossings.right === null
+        ? tex`\text{not available}`
+        : tex`${profile.crossings.right.toFixed(4)} \, \mu\mathrm{m}`;
+
+      const physicsLatex = tex`
+        $$
+        \begin{aligned}
+        n_c(\lambda = 800 \, \mathrm{nm})
+          &= \frac{\varepsilon_0 m_e}{e^2}\left(\frac{2\pi c}{\lambda}\right)^2 \\
+          &= ${latexNumber(PHYSICS.nc)} \, \mathrm{m^{-3}} \\
+          &= ${latexNumber(PHYSICS.nc / 1e6)} \, \mathrm{cm^{-3}}
+        \end{aligned}
+        $$
+
+        $$
+        \begin{aligned}
+        n_{e,\mathrm{water}}
+          &= 10 \, \frac{\rho_{\mathrm{water}}}{M_{\mathrm{H_2O}}} N_A \\
+          &= ${latexNumber(waterSI)} \, \mathrm{m^{-3}} \\
+          &= ${formatRatio(waterSI / ncSI, 4)} \, n_c
+        \end{aligned}
+        $$
+
+        $$
+        \begin{aligned}
+        n_p &= ${latexNumber(state.plateauDensitySI)} \, \mathrm{m^{-3}} \\
+            &= ${latexNumber(state.plateauDensitySI / 1e6)} \, \mathrm{cm^{-3}} \\
+            &= ${formatRatio(state.plateauDensitySI / ncSI, 4)} \, n_c
+        \end{aligned}
+        $$
+
+        $$
+        \begin{aligned}
+        n_{e,\mathrm{CH}}
+          &= 7 \, \frac{\rho_{\mathrm{CH}}}{13 \, \mathrm{g \, mol^{-1}}} N_A \\
+          &= ${latexNumber(chSI)} \, \mathrm{m^{-3}} \\
+        \frac{n_{e,\mathrm{CH}}}{n_c}
+          &= ${formatRatio(chSI / ncSI, 4)} \\
+        \rho_{\mathrm{CH}}
+          &= ${state.chDensity.toFixed(3)} \, \mathrm{g \, cm^{-3}}
+        \end{aligned}
+        $$
+      `;
+
+      const profileLatex = tex`
+        ${profilePieceLatex(profile)}
+
+        $$
+        \begin{aligned}
+        \frac{n_p}{n_c} &= ${formatRatio(state.plateauDensitySI / PHYSICS.nc, 4)} \\
+        x_{L,\,n_c} &= ${leftCrossLatex} \\
+        x_{R,\,n_c} &= ${rightCrossLatex}
+        \end{aligned}
+        $$
+
+        $$
+        \begin{aligned}
+        \mathcal{N} = \int n_e(x) \, \mathrm{d}x
+          &= ${latexNumber(profile.arealDensitySI)} \, \mathrm{m^{-2}} \\
+          &= ${latexNumber(profile.arealDensityCM2)} \, \mathrm{cm^{-2}}
+        \end{aligned}
+        $$
+
+        $$
+        \frac{\mathcal{N}}{n_c \cdot 1 \, \mu\mathrm{m}} = ${formatRatio(profile.arealDensitySI / (PHYSICS.nc * 1e-6), 4)}
+        $$
+
+        $$
+        \begin{aligned}
+        \alpha_L &= ${profile.alphaL.toFixed(5)} \\
+        \alpha_R &= ${profile.alphaR.toFixed(5)}
+        \end{aligned}
+        $$
+      `;
+
+      dom.physicsMath.innerHTML = physicsLatex;
+      dom.profileMath.innerHTML = profileLatex;
+
+      dom.statusList.innerHTML = '';
+      profile.statusMessages.forEach((msg) => {
+        const div = document.createElement('div');
+        div.className = 'status-item';
+        div.textContent = msg;
+        dom.statusList.appendChild(div);
+      });
+
+      await typesetElements([
+        dom.metricNcFormula,
+        dom.metricPlateauFormula,
+        dom.metricWaterFormula,
+        dom.metricChFormula,
+        dom.physicsMath,
+        dom.profileMath
+      ]);
+    }
+
+    function showToast(message) {
+      dom.toast.textContent = message;
+      dom.toast.classList.add('show');
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => dom.toast.classList.remove('show'), 2200);
+    }
+
+    function canvasBlob(canvas) {
+      return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
+    }
+
+    function dashedStrokeValue(style) {
+      const dash = lineDash(style);
+      return dash.length ? dash.join(' ') : 'none';
+    }
+
+    function estimateLabelWidth(text) {
+      return Math.max(108, text.length * 7.1 + 20);
+    }
+
+    function makeSvgLabel(text, x, y, align = 'middle') {
+      const width = estimateLabelWidth(text);
+      const height = 28;
+      let rectX = x - width / 2;
+      if (align === 'start') rectX = x;
+      if (align === 'end') rectX = x - width;
+      const rectY = y;
+      const textX = rectX + width / 2;
+      const textY = rectY + height / 2 + 0.5;
+      return `
+        <g>
+          <rect x="${rectX.toFixed(2)}" y="${rectY.toFixed(2)}" width="${width.toFixed(2)}" height="${height}" rx="9" ry="9" fill="rgba(255,255,255,0.93)" stroke="${svgEscape(rgbaFromHex(state.lineColor, 0.32))}" stroke-width="1"/>
+          <text x="${textX.toFixed(2)}" y="${textY.toFixed(2)}" font-size="12" font-weight="700" text-anchor="middle" fill="#24364b">${svgEscape(text)}</text>
+        </g>`;
+    }
+
+    function buildPathFromPoints(points, mapX, mapY) {
+      let path = '';
+      let started = false;
+      points.forEach((point) => {
+        if (point.y === null || !Number.isFinite(point.y)) {
+          started = false;
+          return;
+        }
+        const x = mapX(point.x);
+        const y = mapY(point.y);
+        if (!started) {
+          path += `M ${x.toFixed(2)} ${y.toFixed(2)}`;
+          started = true;
+        } else {
+          path += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
+        }
+      });
+      return path;
+    }
+
+    function buildAreaPaths(points, mapX, mapY, baselineY) {
+      const paths = [];
+      let segment = [];
+
+      const flushSegment = () => {
+        if (!segment.length) return;
+        let d = `M ${mapX(segment[0].x).toFixed(2)} ${baselineY.toFixed(2)}`;
+        segment.forEach((point) => {
+          d += ` L ${mapX(point.x).toFixed(2)} ${mapY(point.y).toFixed(2)}`;
+        });
+        d += ` L ${mapX(segment[segment.length - 1].x).toFixed(2)} ${baselineY.toFixed(2)} Z`;
+        paths.push(d);
+        segment = [];
+      };
+
+      points.forEach((point) => {
+        if (point.y === null || !Number.isFinite(point.y)) {
+          flushSegment();
+          return;
+        }
+        segment.push(point);
+      });
+      flushSegment();
+      return paths;
+    }
+
+    function createChartSvg(which) {
+      const snapshot = latestChartState[which];
+      if (!snapshot || !latestProfile) return null;
+
+      const width = 1200;
+      const height = 760;
+      const margin = { top: 84, right: 36, bottom: 92, left: 112 };
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+      const plotRight = margin.left + plotWidth;
+      const plotBottom = margin.top + plotHeight;
+      const color = state.lineColor;
+      const fill = rgbaFromHex(color, state.fillOpacity);
+      const strokeDash = dashedStrokeValue(state.lineStyle);
+      const bgFill = state.bg === 'white' ? '#ffffff' : 'none';
+      const xTicks = niceLinearTicks(snapshot.xMin, snapshot.xMax, 6);
+      const yTicks = snapshot.scaleType === 'linear'
+        ? niceLinearTicks(snapshot.yMin, snapshot.yMax, 6)
+        : niceLogTicks(snapshot.yMin, snapshot.yMax);
+
+      const mapX = (value) => margin.left + (value - snapshot.xMin) / (snapshot.xMax - snapshot.xMin) * plotWidth;
+      const mapY = snapshot.scaleType === 'linear'
+        ? (value) => plotBottom - (value - snapshot.yMin) / Math.max(snapshot.yMax - snapshot.yMin, 1e-12) * plotHeight
+        : (value) => {
+            const logMin = Math.log10(snapshot.yMin);
+            const logMax = Math.log10(snapshot.yMax);
+            return plotBottom - (Math.log10(value) - logMin) / Math.max(logMax - logMin, 1e-12) * plotHeight;
+          };
+
+      const baselineY = mapY(snapshot.scaleType === 'linear' ? snapshot.yMin : snapshot.yMin);
+      const linePath = buildPathFromPoints(snapshot.data, mapX, mapY);
+      const areaPaths = buildAreaPaths(snapshot.data, mapX, mapY, baselineY);
+      const gridLinesX = xTicks.map((tick) => `
+        <line x1="${mapX(tick).toFixed(2)}" y1="${margin.top}" x2="${mapX(tick).toFixed(2)}" y2="${plotBottom.toFixed(2)}" stroke="#e5ecf4" stroke-width="1"/>`).join('');
+      const gridLinesY = yTicks.map((tick) => `
+        <line x1="${margin.left}" y1="${mapY(tick).toFixed(2)}" x2="${plotRight.toFixed(2)}" y2="${mapY(tick).toFixed(2)}" stroke="#e5ecf4" stroke-width="1"/>`).join('');
+      const xTickLabels = xTicks.map((tick) => `
+        <g>
+          <line x1="${mapX(tick).toFixed(2)}" y1="${plotBottom.toFixed(2)}" x2="${mapX(tick).toFixed(2)}" y2="${(plotBottom + 7).toFixed(2)}" stroke="#607289" stroke-width="1.2"/>
+          <text x="${mapX(tick).toFixed(2)}" y="${(plotBottom + 28).toFixed(2)}" font-size="14" fill="#607289" text-anchor="middle">${svgEscape(Number(tick.toFixed(4)).toString())}</text>
+        </g>`).join('');
+      const yTickLabels = yTicks.map((tick) => `
+        <g>
+          <line x1="${(margin.left - 7).toFixed(2)}" y1="${mapY(tick).toFixed(2)}" x2="${margin.left.toFixed(2)}" y2="${mapY(tick).toFixed(2)}" stroke="#607289" stroke-width="1.2"/>
+          <text x="${(margin.left - 12).toFixed(2)}" y="${(mapY(tick) + 4.5).toFixed(2)}" font-size="14" fill="#607289" text-anchor="end">${svgEscape(scientificTick(tick))}</text>
+        </g>`).join('');
+
+      let annotations = '';
+      const ratio = latestProfile.crossings.ratio;
+      if (state.annotations === 'on' && ratio > 0 && ratio <= 1) {
+        const ncY = mapY(Math.max(toDisplayDensity(PHYSICS.nc), snapshot.yMin));
+        const plateauYValue = snapshot.scaleType === 'logarithmic'
+          ? Math.max(toDisplayDensity(PHYSICS.nc) * 2.2, toDisplayDensity(state.plateauDensitySI) / 1.35)
+          : Math.min(snapshot.yMax * 0.94, toDisplayDensity(state.plateauDensitySI));
+        const plateauLabelY = Math.max(margin.top + 6, mapY(Math.min(Math.max(plateauYValue, snapshot.yMin), snapshot.yMax)) - 38);
+        annotations += makeSvgLabel(`plateau = ${formatRatio(state.plateauDensitySI / PHYSICS.nc, 4)} n_c`, mapX(latestProfile.plateauMidX), plateauLabelY, 'middle');
+
+        const drawCrossing = (value, text, offsetY) => {
+          if (value === null || value < snapshot.xMin || value > snapshot.xMax) return '';
+          const px = mapX(value);
+          return `
+            <g>
+              <line x1="${px.toFixed(2)}" y1="${(margin.top + 10).toFixed(2)}" x2="${px.toFixed(2)}" y2="${ncY.toFixed(2)}" stroke="${svgEscape(rgbaFromHex(state.lineColor, 0.65))}" stroke-width="1.2" stroke-dasharray="5 5"/>
+              <circle cx="${px.toFixed(2)}" cy="${ncY.toFixed(2)}" r="3.8" fill="${svgEscape(state.lineColor)}"/>
+              ${makeSvgLabel(text, px, margin.top + offsetY, 'middle')}
+            </g>`;
+        };
+
+        annotations += drawCrossing(latestProfile.crossings.left, `left n_c: x = ${latestProfile.crossings.left?.toFixed(3)} μm`, 10);
+        annotations += drawCrossing(latestProfile.crossings.right, `right n_c: x = ${latestProfile.crossings.right?.toFixed(3)} μm`, 44);
+      }
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${svgEscape(snapshot.title)}" font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <clipPath id="plotClip-${which}">
+      <rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" rx="0" ry="0"/>
+    </clipPath>
+  </defs>
+  <rect x="0" y="0" width="${width}" height="${height}" fill="${bgFill}"/>
+  <text x="${width / 2}" y="40" font-size="28" font-weight="700" text-anchor="middle" fill="#24364b">${svgEscape(snapshot.title)}</text>
+  <text x="${width / 2}" y="${height - 22}" font-size="18" font-weight="700" text-anchor="middle" fill="#607289">Position x (μm)</text>
+  <text x="30" y="${height / 2}" font-size="18" font-weight="700" text-anchor="middle" fill="#607289" transform="rotate(-90 30 ${height / 2})">Plasma density (${svgEscape(densityUnitText())})</text>
+  ${gridLinesX}
+  ${gridLinesY}
+  <rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" fill="none" stroke="#d6dee8" stroke-width="1.4"/>
+  <g clip-path="url(#plotClip-${which})">
+    ${areaPaths.map((path) => `<path d="${path}" fill="${svgEscape(fill)}" stroke="none"/>`).join('')}
+    <path d="${linePath}" fill="none" stroke="${svgEscape(color)}" stroke-width="${state.lineWidth}" stroke-linecap="round" stroke-linejoin="round" ${strokeDash === 'none' ? '' : `stroke-dasharray="${strokeDash}"`}/>
+    ${annotations}
+  </g>
+  ${xTickLabels}
+  ${yTickLabels}
+</svg>`;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function sanitizeFilename(value, fallback = 'plasma-density-profile') {
+      const base = String(value || '').trim() || fallback;
+      return base
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '') || fallback;
+    }
+
+    function baseExportName(which, extension) {
+      const title = sanitizeFilename(state.title || DEFAULTS.title);
+      return `${title}-${which}.${extension}`;
+    }
+
+    async function getChartPngBlob(which) {
+      const chart = charts[which];
+      if (!chart) return null;
+
+      const sourceCanvas = chart.canvas;
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = sourceCanvas.width;
+      exportCanvas.height = sourceCanvas.height;
+      const ctx = exportCanvas.getContext('2d');
+
+      if (state.bg === 'white') {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+      }
+      ctx.drawImage(sourceCanvas, 0, 0);
+      return canvasBlob(exportCanvas);
+    }
+
+    async function copyPngBlob(blob, label) {
+      if (!blob) {
+        showToast('Could not prepare the PNG image.');
+        return false;
+      }
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          showToast(`${label} PNG copied to the clipboard.`);
+          return true;
+        }
+        throw new Error('Clipboard API unavailable');
+      } catch (error) {
+        return false;
+      }
+    }
+
+    async function copySvgText(svgText, label) {
+      const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'image/svg+xml': blob,
+              'text/plain': new Blob([svgText], { type: 'text/plain' })
+            })
+          ]);
+          showToast(`${label} SVG copied to the clipboard.`);
+          return true;
+        }
+        throw new Error('Clipboard API unavailable');
+      } catch (error) {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(svgText);
+            showToast(`${label} SVG markup copied as text because image-SVG clipboard is unavailable here.`);
+            return true;
+          }
+        } catch (nestedError) {
+          // fall through
+        }
+        return false;
+      }
+    }
+
+    async function performChartAction(which, format) {
+      const label = which === 'linear' ? 'Linear' : 'Log';
+
+      if (format === 'png') {
+        const blob = await getChartPngBlob(which);
+        if (!blob) {
+          showToast('Could not prepare the PNG image.');
+          return;
+        }
+        if (state.actionMode === 'copy') {
+          const copied = await copyPngBlob(blob, label);
+          if (!copied) {
+            downloadBlob(blob, baseExportName(which, 'png'));
+            showToast('Clipboard access is unavailable here, so the PNG was downloaded instead.');
+          }
+          return;
+        }
+        downloadBlob(blob, baseExportName(which, 'png'));
+        showToast(`${label} PNG exported.`);
+        return;
+      }
+
+      if (format === 'svg') {
+        const svgText = createChartSvg(which);
+        if (!svgText) {
+          showToast('Could not prepare the SVG image.');
+          return;
+        }
+        const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+        if (state.actionMode === 'copy') {
+          const copied = await copySvgText(svgText, label);
+          if (!copied) {
+            downloadBlob(blob, baseExportName(which, 'svg'));
+            showToast('Clipboard access is unavailable here, so the SVG was downloaded instead.');
+          }
+          return;
+        }
+        downloadBlob(blob, baseExportName(which, 'svg'));
+        showToast(`${label} SVG exported.`);
+      }
+    }
+
+    function buildNpyUint8(arrayLike) {
+      const data = arrayLike instanceof Uint8Array ? arrayLike : Uint8Array.from(arrayLike);
+      const shape = `(${data.length},)`;
+      const headerDict = `{'descr': '|u1', 'fortran_order': False, 'shape': ${shape}, }`;
+      const magic = new Uint8Array([0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59, 0x01, 0x00]);
+      let headerText = headerDict;
+      const preambleLength = magic.length + 2;
+      while ((preambleLength + headerText.length + 1) % 16 !== 0) {
+        headerText += ' ';
+      }
+      headerText += '\n';
+      const headerBytes = new TextEncoder().encode(headerText);
+      const headerLen = headerBytes.length;
+      const buffer = new ArrayBuffer(magic.length + 2 + headerLen + data.length);
+      const out = new Uint8Array(buffer);
+      out.set(magic, 0);
+      out[8] = headerLen & 0xff;
+      out[9] = (headerLen >> 8) & 0xff;
+      out.set(headerBytes, 10);
+      out.set(data, 10 + headerLen);
+      return out;
+    }
+
+    function buildNpyFloat64(values) {
+      const data = values instanceof Float64Array ? values : Float64Array.from(values);
+      const shape = `(${data.length},)`;
+      const headerDict = `{'descr': '<f8', 'fortran_order': False, 'shape': ${shape}, }`;
+      const magic = new Uint8Array([0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59, 0x01, 0x00]);
+      let headerText = headerDict;
+      const preambleLength = magic.length + 2;
+      while ((preambleLength + headerText.length + 1) % 16 !== 0) {
+        headerText += ' ';
+      }
+      headerText += '\n';
+      const headerBytes = new TextEncoder().encode(headerText);
+      const headerLen = headerBytes.length;
+      const buffer = new ArrayBuffer(magic.length + 2 + headerLen + data.length * 8);
+      const out = new Uint8Array(buffer);
+      out.set(magic, 0);
+      out[8] = headerLen & 0xff;
+      out[9] = (headerLen >> 8) & 0xff;
+      out.set(headerBytes, 10);
+      const view = new DataView(buffer, 10 + headerLen);
+      data.forEach((value, index) => {
+        view.setFloat64(index * 8, Number(value), true);
+      });
+      return out;
+    }
+
+    async function exportPlotDataNpZ() {
+      if (!latestProfile) {
+        showToast('No plot data is available yet.');
+        return;
+      }
+      if (!window.JSZip) {
+        showToast('JSZip failed to load, so the .npz export is unavailable right now.');
+        return;
+      }
+
+      const zip = new JSZip();
+      const neCm3 = latestProfile.ySI.map((value) => value / 1e6);
+      const meta = {
+        title: state.title || DEFAULTS.title,
+        action_mode: state.actionMode,
+        density_unit_ui: state.yUnit,
+        background: state.bg,
+        annotations: state.annotations,
+        line_color: state.lineColor,
+        line_width: state.lineWidth,
+        line_style: state.lineStyle,
+        fill_opacity: state.fillOpacity,
+        samples: state.samples,
+        profile_start_x_um: state.profileStartX,
+        rise_length_um: state.riseLength,
+        plateau_length_um: state.plateauLength,
+        decay_length_um: state.decayLength,
+        rise_mode: state.riseMode,
+        rise_exp_mode: state.riseExpMode,
+        rise_nc_distance_um: state.riseNcDistance,
+        rise_eq_width_um: state.riseEqWidth,
+        decay_mode: state.decayMode,
+        decay_exp_mode: state.decayExpMode,
+        decay_nc_distance_um: state.decayNcDistance,
+        decay_eq_width_um: state.decayEqWidth,
+        left_ramp_enabled: state.leftRampEnabled,
+        right_ramp_enabled: state.rightRampEnabled,
+        x_display_min_um: state.xDisplayMin,
+        x_display_max_um: state.xDisplayMax,
+        plateau_density_m3: state.plateauDensitySI,
+        plateau_density_over_nc: state.plateauDensitySI / PHYSICS.nc,
+        critical_density_m3: PHYSICS.nc,
+        ch_density_g_cm3: state.chDensity,
+        exported_at: new Date().toISOString()
+      };
+
+      zip.file('x_um.npy', buildNpyFloat64(latestProfile.x));
+      zip.file('ne_m3.npy', buildNpyFloat64(latestProfile.ySI));
+      zip.file('ne_cm3.npy', buildNpyFloat64(neCm3));
+      zip.file('profile_edges_um.npy', buildNpyFloat64([
+        latestProfile.profileStartX,
+        latestProfile.plateauStart,
+        latestProfile.plateauEnd,
+        latestProfile.profileEnd
+      ]));
+      zip.file('x_display_range_um.npy', buildNpyFloat64([state.xDisplayMin, state.xDisplayMax]));
+      zip.file('critical_density_m3.npy', buildNpyFloat64([PHYSICS.nc]));
+      zip.file('plateau_density_m3.npy', buildNpyFloat64([state.plateauDensitySI]));
+      zip.file('crossings_nc_um.npy', buildNpyFloat64([
+        latestProfile.crossings.left ?? Number.NaN,
+        latestProfile.crossings.right ?? Number.NaN
+      ]));
+      zip.file('areal_density_m2.npy', buildNpyFloat64([latestProfile.arealDensitySI]));
+      zip.file('meta_json_utf8.npy', buildNpyUint8(new TextEncoder().encode(JSON.stringify(meta, null, 2))));
+
+      const blob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+      downloadBlob(blob, `${sanitizeFilename(state.title || DEFAULTS.title)}-plot-data.npz`);
+      showToast('Plot data exported as .npz.');
+    }
+
+    function updatePlotActionButtons() {
+      const verb = state.actionMode === 'copy' ? 'Copy' : 'Export';
+      dom.linearPngBtn.textContent = `${verb} linear PNG`;
+      dom.linearSvgBtn.textContent = `${verb} linear SVG`;
+      dom.logPngBtn.textContent = `${verb} log PNG`;
+      dom.logSvgBtn.textContent = `${verb} log SVG`;
+      renderSegmentButtons(dom.actionModeSegment, state.actionMode, 'actionmode');
+    }
+
+    function syncDensityInputsFromState(options = {}) {
+      const { exclude = null, normalizeAll = false } = options;
+      syncLock = true;
+      if (exclude !== 'absolute' || normalizeAll) {
+        dom.plateauDensity.value = formatPlateauDensityInput();
+      }
+      if (exclude !== 'multiple' || normalizeAll) {
+        dom.plateauMultiple.value = formatPlateauMultipleInput();
+      }
+      syncLock = false;
+    }
+
+    function applyPlateauDensityFromAbsolute(commit = false) {
+      if (syncLock) return;
+      const value = parseNonNegativeInput(dom.plateauDensity.value);
+      if (value === null) {
+        if (commit) syncDensityInputsFromState({ normalizeAll: true });
+        return;
+      }
+      state.plateauDensitySI = fromDisplayDensity(value);
+      syncDensityInputsFromState({ exclude: 'absolute' });
+      refreshEverything();
+      if (commit) syncDensityInputsFromState({ normalizeAll: true });
+    }
+
+    function applyPlateauDensityFromMultiple(commit = false) {
+      if (syncLock) return;
+      const value = parseNonNegativeInput(dom.plateauMultiple.value);
+      if (value === null) {
+        if (commit) syncDensityInputsFromState({ normalizeAll: true });
+        return;
+      }
+      state.plateauDensitySI = value * PHYSICS.nc;
+      syncDensityInputsFromState({ exclude: 'multiple' });
+      refreshEverything();
+      if (commit) syncDensityInputsFromState({ normalizeAll: true });
+    }
+
+    function fitRangeToProfile() {
+      setStateFromInputs();
+      const leftLen = state.leftRampEnabled ? state.riseLength : 0;
+      const rightLen = state.rightRampEnabled ? state.decayLength : 0;
+      const plateauStart = state.profileStartX + leftLen;
+      const profileEnd = plateauStart + state.plateauLength + rightLen;
+      const span = Math.max(profileEnd - state.profileStartX, 20);
+      const padLeft = Math.max(4, 0.08 * span);
+      const padRight = Math.max(6, 0.10 * span);
+      state.xDisplayMin = Number((state.profileStartX - padLeft).toFixed(3));
+      state.xDisplayMax = Number((profileEnd + padRight).toFixed(3));
+      dom.xDisplayMin.value = state.xDisplayMin;
+      dom.xDisplayMax.value = state.xDisplayMax;
+      refreshEverything();
+    }
+
+    function resetDefaults() {
+      state.yUnit = DEFAULTS.yUnit;
+      state.bg = DEFAULTS.bg;
+      state.annotations = DEFAULTS.annotations;
+      state.actionMode = DEFAULTS.actionMode;
+      state.plateauDensitySI = DEFAULTS.plateauMultiplier * PHYSICS.nc;
+
+      dom.plotTitle.value = DEFAULTS.title;
+      dom.profileStartX.value = DEFAULTS.profileStartX;
+      dom.leftRampEnabled.checked = DEFAULTS.leftRampEnabled;
+      dom.rightRampEnabled.checked = DEFAULTS.rightRampEnabled;
+      dom.riseLength.value = DEFAULTS.riseLength;
+      dom.plateauLength.value = DEFAULTS.plateauLength;
+      dom.decayLength.value = DEFAULTS.decayLength;
+      dom.riseMode.value = DEFAULTS.riseMode;
+      dom.riseExpMode.value = DEFAULTS.riseExpMode;
+      dom.riseNcDistance.value = DEFAULTS.riseNcDistance;
+      dom.riseEqWidth.value = DEFAULTS.riseEqWidth;
+      dom.decayMode.value = DEFAULTS.decayMode;
+      dom.decayExpMode.value = DEFAULTS.decayExpMode;
+      dom.decayNcDistance.value = DEFAULTS.decayNcDistance;
+      dom.decayEqWidth.value = DEFAULTS.decayEqWidth;
+      dom.chDensity.value = DEFAULTS.chDensity;
+      dom.samples.value = DEFAULTS.samples;
+      dom.lineColor.value = DEFAULTS.lineColor;
+      dom.lineWidth.value = DEFAULTS.lineWidth;
+      dom.lineStyle.value = DEFAULTS.lineStyle;
+      dom.fillOpacity.value = DEFAULTS.fillOpacity;
+      dom.xDisplayMin.value = DEFAULTS.xDisplayMin;
+      dom.xDisplayMax.value = DEFAULTS.xDisplayMax;
+
+      syncDensityInputsFromState({ normalizeAll: true });
+      renderSegmentButtons(dom.unitSegment, state.yUnit, 'unit');
+      renderSegmentButtons(dom.bgSegment, state.bg, 'bg');
+      renderSegmentButtons(dom.annotationSegment, state.annotations, 'annot');
+      updatePlotActionButtons();
+      refreshEverything();
+    }
+
+    async function refreshEverything() {
+      setStateFromInputs();
+      updateDerivedValues();
+      const profile = buildDensityProfile(state);
+      updateChartData(profile);
+      await updateLatex(profile);
+    }
+
+    function wireInputs() {
+      const standardInputs = [
+        dom.plotTitle, dom.profileStartX, dom.leftRampEnabled, dom.rightRampEnabled,
+        dom.riseLength, dom.plateauLength, dom.decayLength, dom.riseMode, dom.riseExpMode,
+        dom.riseNcDistance, dom.riseEqWidth, dom.decayMode, dom.decayExpMode,
+        dom.decayNcDistance, dom.decayEqWidth, dom.chDensity, dom.samples,
+        dom.lineColor, dom.lineWidth, dom.lineStyle, dom.fillOpacity,
+        dom.xDisplayMin, dom.xDisplayMax
+      ];
+
+      standardInputs.forEach((el) => {
+        el.addEventListener('input', () => refreshEverything());
+        el.addEventListener('change', () => refreshEverything());
+      });
+
+      dom.plateauDensity.addEventListener('input', () => applyPlateauDensityFromAbsolute(false));
+      dom.plateauDensity.addEventListener('change', () => applyPlateauDensityFromAbsolute(true));
+      dom.plateauDensity.addEventListener('blur', () => applyPlateauDensityFromAbsolute(true));
+
+      dom.plateauMultiple.addEventListener('input', () => applyPlateauDensityFromMultiple(false));
+      dom.plateauMultiple.addEventListener('change', () => applyPlateauDensityFromMultiple(true));
+      dom.plateauMultiple.addEventListener('blur', () => applyPlateauDensityFromMultiple(true));
+
+      dom.unitSegment.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-unit]');
+        if (!button) return;
+        state.yUnit = button.dataset.unit;
+        syncDensityInputsFromState({ normalizeAll: true });
+        refreshEverything();
+      });
+
+      dom.bgSegment.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-bg]');
+        if (!button) return;
+        state.bg = button.dataset.bg;
+        refreshEverything();
+      });
+
+      dom.annotationSegment.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-annot]');
+        if (!button) return;
+        state.annotations = button.dataset.annot;
+        renderSegmentButtons(dom.annotationSegment, state.annotations, 'annot');
+        refreshEverything();
+      });
+
+      dom.actionModeSegment.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-actionmode]');
+        if (!button) return;
+        state.actionMode = button.dataset.actionmode;
+        updatePlotActionButtons();
+      });
+
+      dom.linearPngBtn.addEventListener('click', () => performChartAction('linear', 'png'));
+      dom.linearSvgBtn.addEventListener('click', () => performChartAction('linear', 'svg'));
+      dom.logPngBtn.addEventListener('click', () => performChartAction('log', 'png'));
+      dom.logSvgBtn.addEventListener('click', () => performChartAction('log', 'svg'));
+      dom.exportDataBtn.addEventListener('click', exportPlotDataNpZ);
+      dom.resetDefaultsBtn.addEventListener('click', resetDefaults);
+      dom.fitRangeBtn.addEventListener('click', fitRangeToProfile);
+    }
+
+    async function init() {
+      createCharts();
+      wireInputs();
+      syncDensityInputsFromState({ normalizeAll: true });
+      renderSegmentButtons(dom.unitSegment, state.yUnit, 'unit');
+      renderSegmentButtons(dom.bgSegment, state.bg, 'bg');
+      renderSegmentButtons(dom.annotationSegment, state.annotations, 'annot');
+      updatePlotActionButtons();
+      await refreshEverything();
+    }
+
+    init();
+  </script>
+</body>
+</html>

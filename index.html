@@ -82,7 +82,7 @@
 
     .hero p {
       margin: 0;
-      max-width: 860px;
+      max-width: 900px;
       color: var(--muted);
     }
 
@@ -165,9 +165,7 @@
     .span-3 { grid-column: span 3; }
     .span-2 { grid-column: span 2; }
 
-    input, select, button {
-      font: inherit;
-    }
+    input, select, button { font: inherit; }
 
     input[type="text"],
     input[type="number"],
@@ -309,6 +307,16 @@
       border: 1px solid var(--border);
     }
 
+    .formula-hint {
+      margin-top: 6px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(31,119,180,0.08);
+      border: 1px solid rgba(31,119,180,0.14);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
     .charts-header-actions {
       display: flex;
       gap: 10px;
@@ -342,9 +350,7 @@
       transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
     }
 
-    .action-btn:hover {
-      transform: translateY(-1px);
-    }
+    .action-btn:hover { transform: translateY(-1px); }
 
     .action-btn.primary {
       background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
@@ -493,9 +499,7 @@
       padding-bottom: 2px;
     }
 
-    .formula-shell + .formula-shell {
-      margin-top: 14px;
-    }
+    .formula-shell + .formula-shell { margin-top: 14px; }
 
     .math-note {
       margin-top: 10px;
@@ -548,12 +552,8 @@
     }
 
     @media (max-width: 1120px) {
-      .chart-grid, .formula-grid {
-        grid-template-columns: 1fr;
-      }
-      .span-8, .span-6, .span-4, .span-3, .span-2 {
-        grid-column: span 12;
-      }
+      .chart-grid, .formula-grid { grid-template-columns: 1fr; }
+      .span-8, .span-6, .span-4, .span-3, .span-2 { grid-column: span 12; }
     }
 
     @media (max-width: 780px) {
@@ -561,19 +561,9 @@
         width: min(100vw - 16px, 100%);
         margin: 10px auto 26px;
       }
-
-      .hero, .panel {
-        padding: 18px;
-      }
-
-      .hero {
-        flex-direction: column;
-      }
-
-      .canvas-wrap {
-        height: 360px;
-      }
-
+      .hero, .panel { padding: 18px; }
+      .hero { flex-direction: column; }
+      .canvas-wrap { height: 360px; }
       .chart-controls-grid, .controls-grid, .inner-grid {
         grid-template-columns: repeat(12, minmax(0, 1fr));
       }
@@ -585,9 +575,9 @@
     <header class="hero">
       <div>
         <h1>Plasma Density Profile Plotter</h1>
-        <p>Build a plasma-density profile with fully editable ramps, plateau, styling, annotations, and export-friendly linear and logarithmic views for GitHub Pages.</p>
+        <p>Build a plasma-density profile with editable left/right edge densities, plateau, extrapolated exponential constraints, annotations, and export-friendly linear/logarithmic views. In the n<sub>c</sub>-distance mode, the chosen distance now sets the exponential coefficient through the exponential continuation, so it can be shorter or longer than the visible ramp.</p>
       </div>
-      <div class="hero-badge">JupyterLab-inspired light theme</div>
+      <div class="hero-badge">Updated exponential ramp logic</div>
     </header>
 
     <div class="stack">
@@ -651,6 +641,11 @@
             <input id="chDensity" type="number" min="0.001" step="any" value="1.05" />
           </div>
 
+          <div class="field span-3">
+            <label for="samples">Sampling points</label>
+            <input id="samples" type="number" min="300" max="8000" step="100" value="1800" />
+            <small>Only affects curve smoothness and export detail.</small>
+          </div>
 
           <div class="field span-6">
             <div class="group-card">
@@ -681,6 +676,21 @@
                   </select>
                 </div>
 
+                <div class="field span-6">
+                  <label for="leftStartDensity">Left start density</label>
+                  <div class="inline-pair">
+                    <input id="leftStartDensity" type="number" min="0" step="any" value="0" />
+                    <div class="unit-chip" id="leftStartUnitChip">/m³</div>
+                  </div>
+                  <small>Density at the left-ramp start x<sub>0</sub>. The region before x<sub>0</sub> stays at 0, so a nonzero value creates a vertical jump.</small>
+                </div>
+
+                <div class="field span-6">
+                  <label for="leftStartMultiple">Left start density (× n<sub>c</sub>)</label>
+                  <input id="leftStartMultiple" type="number" min="0" step="any" value="0" />
+                  <small>Editable in either absolute or critical-density units.</small>
+                </div>
+
                 <div class="span-12">
                   <div class="mode-block" id="riseExpBlock">
                     <div class="field">
@@ -694,14 +704,16 @@
                     <div class="field" id="riseNcField" style="margin-top: 12px;">
                       <label for="riseNcDistance">Distance to reach n_c (μm)</label>
                       <input id="riseNcDistance" type="number" min="0.001" step="any" value="12" />
-                      <small>Measured from the left-ramp start position.</small>
+                      <small>Measured from the left-ramp start position. This may be longer than the visible ramp and is then interpreted as the extrapolated exponential continuation.</small>
                     </div>
 
                     <div class="field" id="riseAreaField" style="display:none; margin-top: 12px;">
                       <label for="riseEqWidth">Equivalent rectangle width (μm)</label>
                       <input id="riseEqWidth" type="number" min="0.001" step="any" value="8" />
-                      <small>The exponential ramp contains the same particles as a rectangle of width \(w_\mathrm{eq}\) and height \(n_p\).</small>
+                      <small>The ramp contains the same particles as a rectangle of width w<sub>eq</sub> and height n<sub>p</sub>.</small>
                     </div>
+
+                    <div class="formula-hint">Left exponential formula: \(n_L(x)=n_{L0}+(n_p-n_{L0})\dfrac{e^{\alpha_L (x-x_0)/L_L}-1}{e^{\alpha_L}-1}\).</div>
                   </div>
                 </div>
               </div>
@@ -737,27 +749,44 @@
                   </select>
                 </div>
 
+                <div class="field span-6">
+                  <label for="rightEndDensity">Right end density</label>
+                  <div class="inline-pair">
+                    <input id="rightEndDensity" type="number" min="0" step="any" value="0" />
+                    <div class="unit-chip" id="rightEndUnitChip">/m³</div>
+                  </div>
+                  <small>Density at the right-ramp end x<sub>3</sub>. The region after x<sub>3</sub> stays at 0, so a nonzero value creates a vertical drop.</small>
+                </div>
+
+                <div class="field span-6">
+                  <label for="rightEndMultiple">Right end density (× n<sub>c</sub>)</label>
+                  <input id="rightEndMultiple" type="number" min="0" step="any" value="0" />
+                  <small>Editable in either absolute or critical-density units.</small>
+                </div>
+
                 <div class="span-12">
                   <div class="mode-block" id="decayExpBlock">
                     <div class="field">
                       <label for="decayExpMode">Exponential decay constraint</label>
                       <select id="decayExpMode">
-                        <option value="nc" selected>Drop to n_c after a chosen distance</option>
+                        <option value="nc" selected>Reach n_c after a chosen distance</option>
                         <option value="area">Equivalent rectangle particle count</option>
                       </select>
                     </div>
 
                     <div class="field" id="decayNcField" style="margin-top: 12px;">
-                      <label for="decayNcDistance">Distance to drop to n_c (μm)</label>
+                      <label for="decayNcDistance">Distance to reach n_c (μm)</label>
                       <input id="decayNcDistance" type="number" min="0.001" step="any" value="5" />
-                      <small>Measured from the right-ramp start position.</small>
+                      <small>Measured from the right-ramp start position. This may be longer than the visible ramp and is then interpreted as the extrapolated exponential continuation.</small>
                     </div>
 
                     <div class="field" id="decayAreaField" style="display:none; margin-top: 12px;">
                       <label for="decayEqWidth">Equivalent rectangle width (μm)</label>
                       <input id="decayEqWidth" type="number" min="0.001" step="any" value="6" />
-                      <small>The exponential ramp contains the same particles as a rectangle of width \(w_\mathrm{eq}\) and height \(n_p\).</small>
+                      <small>The ramp contains the same particles as a rectangle of width w<sub>eq</sub> and height n<sub>p</sub>.</small>
                     </div>
+
+                    <div class="formula-hint">Right exponential formula: \(n_R(x)=n_p+(n_{R1}-n_p)\dfrac{e^{\alpha_R (x-x_2)/L_R}-1}{e^{\alpha_R}-1}\).</div>
                   </div>
                 </div>
               </div>
@@ -809,7 +838,7 @@
             <div class="canvas-wrap">
               <canvas id="logChart"></canvas>
             </div>
-            <div class="caption">Best for inspecting the low-density region and the left/right \(n_c\) crossing locations.</div>
+            <div class="caption">Best for inspecting low-density regions, actual n_c crossings, and extrapolated n_c locations that define the exponential coefficient.</div>
           </article>
         </div>
 
@@ -847,12 +876,6 @@
             <div class="field span-2">
               <label for="fillOpacity">Fill opacity</label>
               <input id="fillOpacity" type="number" min="0" max="0.5" step="0.01" value="0.10" />
-            </div>
-
-            <div class="field span-3">
-              <label for="samples">Sampling points</label>
-              <input id="samples" type="number" min="300" max="8000" step="100" value="1800" />
-              <small>Only affects curve smoothness and export detail. Derived values stay analytic.</small>
             </div>
 
             <div class="field span-3">
@@ -896,8 +919,8 @@
           </div>
 
           <div class="formula-card">
-            <div class="metric-label">Pure water</div>
-            <div class="formula-content" id="metricWaterFormula"></div>
+            <div class="metric-label">Left / right edge densities</div>
+            <div class="formula-content" id="metricEdgesFormula"></div>
           </div>
 
           <div class="formula-card">
@@ -915,13 +938,13 @@
         <div class="section-header">
           <div>
             <h2>Latex summary</h2>
-            <p class="subtle">The profile definition, key crossing locations, and the total areal density \(\int n_e(x)\,\mathrm{d}x\) are all rendered live.</p>
+            <p class="subtle">The profile definition, actual/extrapolated n_c locations, and the total areal density \(\int n_e(x)\,\mathrm{d}x\) are all rendered live.</p>
           </div>
         </div>
 
         <div class="formula-shell">
           <div id="physicsMath"></div>
-          <div class="math-note">This block prints the 800 nm critical density, the current plateau density, and the reference solid-density estimates.</div>
+          <div class="math-note">The summary now distinguishes between actual n_c crossings on the displayed profile and extrapolated n_c locations used only to set the exponential curvature.</div>
         </div>
 
         <div class="formula-shell">
@@ -950,7 +973,9 @@
       title: 'Plasma density profile',
       yUnit: 'm3',
       bg: 'white',
-      plateauMultiplier: 100,
+      plateauMultiple: 100,
+      leftStartMultiple: 0,
+      rightEndMultiple: 0,
       profileStartX: 10,
       leftRampEnabled: true,
       rightRampEnabled: true,
@@ -977,7 +1002,12 @@
       actionMode: 'copy'
     };
 
-    const state = { ...DEFAULTS, plateauDensitySI: DEFAULTS.plateauMultiplier * PHYSICS.nc };
+    const state = {
+      ...DEFAULTS,
+      plateauDensitySI: DEFAULTS.plateauMultiple * PHYSICS.nc,
+      leftStartDensitySI: DEFAULTS.leftStartMultiple * PHYSICS.nc,
+      rightEndDensitySI: DEFAULTS.rightEndMultiple * PHYSICS.nc
+    };
 
     const dom = {
       plotTitle: document.getElementById('plotTitle'),
@@ -998,6 +1028,12 @@
       decayExpMode: document.getElementById('decayExpMode'),
       decayNcDistance: document.getElementById('decayNcDistance'),
       decayEqWidth: document.getElementById('decayEqWidth'),
+      leftStartDensity: document.getElementById('leftStartDensity'),
+      leftStartMultiple: document.getElementById('leftStartMultiple'),
+      rightEndDensity: document.getElementById('rightEndDensity'),
+      rightEndMultiple: document.getElementById('rightEndMultiple'),
+      leftStartUnitChip: document.getElementById('leftStartUnitChip'),
+      rightEndUnitChip: document.getElementById('rightEndUnitChip'),
       riseExpBlock: document.getElementById('riseExpBlock'),
       decayExpBlock: document.getElementById('decayExpBlock'),
       riseNcField: document.getElementById('riseNcField'),
@@ -1012,7 +1048,7 @@
       actionModeSegment: document.getElementById('actionModeSegment'),
       metricNcFormula: document.getElementById('metricNcFormula'),
       metricPlateauFormula: document.getElementById('metricPlateauFormula'),
-      metricWaterFormula: document.getElementById('metricWaterFormula'),
+      metricEdgesFormula: document.getElementById('metricEdgesFormula'),
       metricChFormula: document.getElementById('metricChFormula'),
       physicsMath: document.getElementById('physicsMath'),
       profileMath: document.getElementById('profileMath'),
@@ -1053,18 +1089,17 @@
       return Number.isFinite(num) ? num : fallback;
     }
 
-    function formatSci(value, digits = 4) {
-      if (!Number.isFinite(value)) return '—';
-      if (value === 0) return '0';
-      const exp = Math.floor(Math.log10(Math.abs(value)));
-      const mant = value / (10 ** exp);
-      return `${mant.toFixed(digits)} × 10^${exp}`;
+    function clampNonNegative(value, fallback = 0) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return fallback;
+      return Math.max(num, 0);
     }
 
     function formatRatio(value, digits = 4) {
       if (!Number.isFinite(value)) return '—';
-      if (Math.abs(value) >= 100) return value.toFixed(1);
-      if (Math.abs(value) >= 10) return value.toFixed(2);
+      if (Math.abs(value) >= 1000) return value.toFixed(1);
+      if (Math.abs(value) >= 100) return value.toFixed(2);
+      if (Math.abs(value) >= 10) return value.toFixed(3);
       return value.toFixed(digits);
     }
 
@@ -1099,20 +1134,8 @@
       return value;
     }
 
-    function formatPlateauDensityInput() {
-      return formatEditableNumber(toDisplayDensity(state.plateauDensitySI), { digits: 6, scientific: true });
-    }
-
-    function formatPlateauMultipleInput() {
-      return formatEditableNumber(state.plateauDensitySI / PHYSICS.nc, { digits: 6, scientific: false });
-    }
-
     function densityUnitText() {
       return state.yUnit === 'm3' ? '/m³' : '/cm³';
-    }
-
-    function densityUnitLatex() {
-      return state.yUnit === 'm3' ? '\\mathrm{m^{-3}}' : '\\mathrm{cm^{-3}}';
     }
 
     function toDisplayDensity(si) {
@@ -1137,32 +1160,33 @@
 
     function areaFraction(alpha) {
       if (Math.abs(alpha) < 1e-10) return 0.5;
-      const ea = Math.exp(alpha);
-      return (1 / alpha) - 1 / (ea - 1);
+      const denom = Math.expm1(alpha);
+      if (!Number.isFinite(denom) || denom === 0) return alpha > 0 ? 0 : 1;
+      return (1 / alpha) - 1 / denom;
     }
 
     function normalizedExp(t, alpha) {
-      if (t <= 0) return 0;
-      if (t >= 1) return 1;
       if (Math.abs(alpha) < 1e-10) return t;
-      const ea = Math.exp(alpha);
-      return (Math.exp(alpha * t) - 1) / (ea - 1);
+      const denom = Math.expm1(alpha);
+      if (!Number.isFinite(denom) || denom === 0) return Number.NaN;
+      const numer = Math.expm1(alpha * t);
+      if (!Number.isFinite(numer)) {
+        if (alpha > 0 && t > 1) return Number.POSITIVE_INFINITY;
+        return Number.NaN;
+      }
+      return numer / denom;
     }
 
-    function solveMonotone(targetFn, target, low = -40, high = 40, iterations = 120) {
+    function solveBracketed(fn, low, high, iterations = 120) {
       let lo = low;
       let hi = high;
-      let flo = targetFn(lo) - target;
-      let fhi = targetFn(hi) - target;
-
-      if (!Number.isFinite(flo) || !Number.isFinite(fhi)) return null;
-      if (flo === 0) return lo;
-      if (fhi === 0) return hi;
-      if (flo * fhi > 0) return null;
-
+      let flo = fn(lo);
+      let fhi = fn(hi);
+      if (!Number.isFinite(flo) || !Number.isFinite(fhi) || flo * fhi > 0) return null;
       for (let i = 0; i < iterations; i += 1) {
         const mid = 0.5 * (lo + hi);
-        const fm = targetFn(mid) - target;
+        const fm = fn(mid);
+        if (!Number.isFinite(fm)) return null;
         if (Math.abs(fm) < 1e-12) return mid;
         if (flo * fm <= 0) {
           hi = mid;
@@ -1175,6 +1199,41 @@
       return 0.5 * (lo + hi);
     }
 
+    function solveAreaAlpha(target) {
+      if (!(target > 0 && target < 1)) return null;
+      return solveBracketed((a) => areaFraction(a) - target, -60, 60);
+    }
+
+    function solveDistanceAlpha(distanceRatio, target) {
+      if (!(distanceRatio > 0) || !(target > 0)) return null;
+      if (Math.abs(distanceRatio - 1) < 1e-12) {
+        return Math.abs(target - 1) < 1e-10 ? 0 : null;
+      }
+
+      if (distanceRatio > 1 && !(target > 1)) return null;
+      if (distanceRatio < 1 && !(target > 0 && target < 1)) return null;
+
+      const f0 = distanceRatio - target;
+      if (Math.abs(f0) < 1e-12) return 0;
+
+      const wantPositive = (distanceRatio > 1 && target > distanceRatio) || (distanceRatio < 1 && target < distanceRatio);
+      let probe = wantPositive ? 0.25 : -0.25;
+      let fp = normalizedExp(distanceRatio, probe) - target;
+      let count = 0;
+
+      while ((!(Number.isFinite(fp)) || f0 * fp > 0) && count < 80) {
+        probe *= 1.65;
+        fp = normalizedExp(distanceRatio, probe) - target;
+        count += 1;
+      }
+
+      if (!Number.isFinite(fp) || f0 * fp > 0) return null;
+
+      const low = wantPositive ? 0 : probe;
+      const high = wantPositive ? probe : 0;
+      return solveBracketed((a) => normalizedExp(distanceRatio, a) - target, low, high);
+    }
+
     function lineDash(style) {
       if (style === 'dashed') return [12, 7];
       if (style === 'dotted') return [2, 6];
@@ -1184,9 +1243,7 @@
 
     function hexToRgb(hex) {
       const cleaned = (hex || '#1f77b4').replace('#', '');
-      const normalized = cleaned.length === 3
-        ? cleaned.split('').map(c => c + c).join('')
-        : cleaned.padEnd(6, '0').slice(0, 6);
+      const normalized = cleaned.length === 3 ? cleaned.split('').map((c) => c + c).join('') : cleaned.padEnd(6, '0').slice(0, 6);
       const intVal = parseInt(normalized, 16);
       return {
         r: (intVal >> 16) & 255,
@@ -1209,36 +1266,6 @@
         .replace(/'/g, '&apos;');
     }
 
-    function niceLinearTicks(min, max, target = 6) {
-      const span = Math.max(max - min, 1e-12);
-      const rough = span / Math.max(target, 1);
-      const exp = Math.floor(Math.log10(Math.abs(rough)));
-      const base = rough / (10 ** exp);
-      let step = 1;
-      if (base > 1 && base <= 2) step = 2;
-      else if (base > 2 && base <= 5) step = 5;
-      else if (base > 5) step = 10;
-      step *= 10 ** exp;
-
-      const ticks = [];
-      const start = Math.ceil(min / step) * step;
-      for (let value = start; value <= max + step * 0.5; value += step) {
-        ticks.push(Number(value.toPrecision(12)));
-      }
-      if (min === 0 && !ticks.includes(0)) ticks.unshift(0);
-      return ticks.filter((value) => value >= min - step * 1e-6 && value <= max + step * 1e-6);
-    }
-
-    function niceLogTicks(min, max) {
-      const ticks = [];
-      const start = Math.ceil(Math.log10(min));
-      const end = Math.floor(Math.log10(max));
-      for (let exp = start; exp <= end; exp += 1) {
-        ticks.push(10 ** exp);
-      }
-      return ticks;
-    }
-
     function scientificTick(value) {
       if (value === 0) return '0';
       const exp = Math.floor(Math.log10(value));
@@ -1252,6 +1279,57 @@
         const active = button.dataset[key] === activeValue;
         button.classList.toggle('active', active);
       });
+    }
+
+    function formatDensityInput(siValue) {
+      return formatEditableNumber(toDisplayDensity(siValue), { digits: 6, scientific: true });
+    }
+
+    function formatMultipleInput(siValue) {
+      return formatEditableNumber(siValue / PHYSICS.nc, { digits: 6, scientific: false });
+    }
+
+    function syncDensityInputsFromState(options = {}) {
+      const { exclude = null, normalizeAll = false } = options;
+      syncLock = true;
+      if (exclude !== 'plateauAbsolute' || normalizeAll) dom.plateauDensity.value = formatDensityInput(state.plateauDensitySI);
+      if (exclude !== 'plateauMultiple' || normalizeAll) dom.plateauMultiple.value = formatMultipleInput(state.plateauDensitySI);
+      if (exclude !== 'leftAbsolute' || normalizeAll) dom.leftStartDensity.value = formatDensityInput(state.leftStartDensitySI);
+      if (exclude !== 'leftMultiple' || normalizeAll) dom.leftStartMultiple.value = formatMultipleInput(state.leftStartDensitySI);
+      if (exclude !== 'rightAbsolute' || normalizeAll) dom.rightEndDensity.value = formatDensityInput(state.rightEndDensitySI);
+      if (exclude !== 'rightMultiple' || normalizeAll) dom.rightEndMultiple.value = formatMultipleInput(state.rightEndDensitySI);
+      dom.densityUnitChip.textContent = densityUnitText();
+      dom.leftStartUnitChip.textContent = densityUnitText();
+      dom.rightEndUnitChip.textContent = densityUnitText();
+      syncLock = false;
+    }
+
+    function applyDensityField(which, mode, commit = false) {
+      if (syncLock) return;
+      let field;
+      if (which === 'plateau' && mode === 'absolute') field = dom.plateauDensity;
+      if (which === 'plateau' && mode === 'multiple') field = dom.plateauMultiple;
+      if (which === 'left' && mode === 'absolute') field = dom.leftStartDensity;
+      if (which === 'left' && mode === 'multiple') field = dom.leftStartMultiple;
+      if (which === 'right' && mode === 'absolute') field = dom.rightEndDensity;
+      if (which === 'right' && mode === 'multiple') field = dom.rightEndMultiple;
+      if (!field) return;
+
+      const value = parseNonNegativeInput(field.value);
+      if (value === null) {
+        if (commit) syncDensityInputsFromState({ normalizeAll: true });
+        return;
+      }
+
+      const siValue = mode === 'absolute' ? fromDisplayDensity(value) : value * PHYSICS.nc;
+      if (which === 'plateau') state.plateauDensitySI = siValue;
+      if (which === 'left') state.leftStartDensitySI = siValue;
+      if (which === 'right') state.rightEndDensitySI = siValue;
+
+      const exclude = `${which === 'plateau' ? 'plateau' : which}${mode === 'absolute' ? 'Absolute' : 'Multiple'}`;
+      syncDensityInputsFromState({ exclude });
+      refreshEverything();
+      if (commit) syncDensityInputsFromState({ normalizeAll: true });
     }
 
     function setStateFromInputs() {
@@ -1272,6 +1350,8 @@
       state.decayEqWidth = clampPositive(dom.decayEqWidth.value, DEFAULTS.decayEqWidth);
       state.chDensity = clampPositive(dom.chDensity.value, DEFAULTS.chDensity);
       state.samples = Math.max(300, Math.min(8000, Math.round(clampPositive(dom.samples.value, DEFAULTS.samples))));
+      state.leftStartDensitySI = clampNonNegative(fromDisplayDensity(dom.leftStartDensity.value), 0);
+      state.rightEndDensitySI = clampNonNegative(fromDisplayDensity(dom.rightEndDensity.value), 0);
       state.lineColor = dom.lineColor.value || DEFAULTS.lineColor;
       state.lineWidth = Math.min(8, Math.max(0.5, clampPositive(dom.lineWidth.value, DEFAULTS.lineWidth, 0.5)));
       state.lineStyle = dom.lineStyle.value;
@@ -1291,133 +1371,160 @@
       dom.decayNcField.style.display = state.decayExpMode === 'nc' ? 'block' : 'none';
       dom.decayAreaField.style.display = state.decayExpMode === 'area' ? 'block' : 'none';
 
-      dom.densityUnitChip.textContent = densityUnitText();
       dom.riseLength.disabled = !state.leftRampEnabled;
       dom.riseMode.disabled = !state.leftRampEnabled;
+      dom.leftStartDensity.disabled = !state.leftRampEnabled;
+      dom.leftStartMultiple.disabled = !state.leftRampEnabled;
       dom.decayLength.disabled = !state.rightRampEnabled;
       dom.decayMode.disabled = !state.rightRampEnabled;
+      dom.rightEndDensity.disabled = !state.rightRampEnabled;
+      dom.rightEndMultiple.disabled = !state.rightRampEnabled;
 
       renderSegmentButtons(dom.unitSegment, state.yUnit, 'unit');
       renderSegmentButtons(dom.bgSegment, state.bg, 'bg');
       renderSegmentButtons(dom.annotationSegment, state.annotations, 'annot');
     }
 
-    function riseAlpha(params, statusMessages) {
+    function leftAreaFactor(startRatio, alpha, effectiveMode) {
+      if (effectiveMode === 'linear') return 0.5 * (1 + startRatio);
+      return startRatio + (1 - startRatio) * areaFraction(alpha);
+    }
+
+    function rightAreaFactor(endRatio, alpha, effectiveMode) {
+      if (effectiveMode === 'linear') return 0.5 * (1 + endRatio);
+      return 1 + (endRatio - 1) * areaFraction(alpha);
+    }
+
+    function solveLeftAlpha(params, statusMessages) {
       if (!params.leftRampEnabled || params.riseMode !== 'exp') return { alpha: 0, fallback: false };
+      const n0 = params.leftStartDensitySI;
+      const np = params.plateauDensitySI;
+      const delta = np - n0;
+      if (Math.abs(delta) < 1e-18 * Math.max(np, 1)) {
+        statusMessages.push('The left start density equals the plateau density, so the left ramp is constant and the exponential shape parameter is set to 0.');
+        return { alpha: 0, fallback: true };
+      }
+
       if (params.riseExpMode === 'area') {
         const fraction = params.riseEqWidth / params.riseLength;
-        if (!(fraction > 0 && fraction < 1)) {
-          statusMessages.push('The left exponential equivalent rectangle width must stay between 0 and the left ramp length. The left ramp falls back to linear.');
+        const startRatio = n0 / np;
+        const denom = 1 - startRatio;
+        if (Math.abs(denom) < 1e-12) {
+          statusMessages.push('The left equivalent-area constraint is ill-defined because the left start density already equals the plateau density. Falling back to linear.');
           return { alpha: 0, fallback: true };
         }
-        const alpha = solveMonotone(areaFraction, fraction);
+        const target = (fraction - startRatio) / denom;
+        const alpha = solveAreaAlpha(target);
         if (alpha === null) {
-          statusMessages.push('The left exponential area constraint could not be solved. The left ramp falls back to linear.');
+          statusMessages.push('The left equivalent-area constraint has no valid exponential solution for the chosen start density and width. Falling back to linear.');
           return { alpha: 0, fallback: true };
         }
         return { alpha, fallback: false };
       }
 
-      const tNc = params.riseNcDistance / params.riseLength;
-      const ratio = PHYSICS.nc / params.plateauDensitySI;
-      if (!(tNc > 0 && tNc < 1)) {
-        statusMessages.push('The left-ramp distance to reach n_c must lie strictly inside the left ramp. The left ramp falls back to linear.');
-        return { alpha: 0, fallback: true };
-      }
-      if (!(ratio > 0 && ratio < 1)) {
-        statusMessages.push('The plateau density must be larger than n_c to enforce a left-ramp n_c crossing. The left ramp falls back to linear.');
-        return { alpha: 0, fallback: true };
-      }
-      const alpha = solveMonotone((a) => normalizedExp(tNc, a), ratio);
+      const distanceRatio = params.riseNcDistance / params.riseLength;
+      const target = (PHYSICS.nc - n0) / delta;
+      const alpha = solveDistanceAlpha(distanceRatio, target);
       if (alpha === null) {
-        statusMessages.push('The left exponential n_c-crossing constraint could not be solved. The left ramp falls back to linear.');
+        statusMessages.push('The left n_c-distance constraint has no real exponential solution for the current start density, plateau density, and chosen distance. Falling back to linear.');
         return { alpha: 0, fallback: true };
+      }
+      if (distanceRatio > 1) {
+        statusMessages.push('The left n_c distance is longer than the visible ramp, so it is treated as an extrapolated continuation used only to set the exponential coefficient.');
       }
       return { alpha, fallback: false };
     }
 
-    function decayAlpha(params, statusMessages) {
+    function solveRightAlpha(params, statusMessages) {
       if (!params.rightRampEnabled || params.decayMode !== 'exp') return { alpha: 0, fallback: false };
+      const ne = params.rightEndDensitySI;
+      const np = params.plateauDensitySI;
+      const delta = ne - np;
+      if (Math.abs(delta) < 1e-18 * Math.max(np, 1)) {
+        statusMessages.push('The right end density equals the plateau density, so the right ramp is constant and the exponential shape parameter is set to 0.');
+        return { alpha: 0, fallback: true };
+      }
+
       if (params.decayExpMode === 'area') {
         const fraction = params.decayEqWidth / params.decayLength;
-        if (!(fraction > 0 && fraction < 1)) {
-          statusMessages.push('The right exponential equivalent rectangle width must stay between 0 and the right ramp length. The right ramp falls back to linear.');
+        const endRatio = ne / np;
+        const denom = endRatio - 1;
+        if (Math.abs(denom) < 1e-12) {
+          statusMessages.push('The right equivalent-area constraint is ill-defined because the right end density already equals the plateau density. Falling back to linear.');
           return { alpha: 0, fallback: true };
         }
-        const alpha = solveMonotone(areaFraction, fraction);
+        const target = (fraction - 1) / denom;
+        const alpha = solveAreaAlpha(target);
         if (alpha === null) {
-          statusMessages.push('The right exponential area constraint could not be solved. The right ramp falls back to linear.');
+          statusMessages.push('The right equivalent-area constraint has no valid exponential solution for the chosen end density and width. Falling back to linear.');
           return { alpha: 0, fallback: true };
         }
         return { alpha, fallback: false };
       }
 
-      const tNc = params.decayNcDistance / params.decayLength;
-      const ratio = PHYSICS.nc / params.plateauDensitySI;
-      if (!(tNc > 0 && tNc < 1)) {
-        statusMessages.push('The right-ramp distance to drop to n_c must lie strictly inside the right ramp. The right ramp falls back to linear.');
-        return { alpha: 0, fallback: true };
-      }
-      if (!(ratio > 0 && ratio < 1)) {
-        statusMessages.push('The plateau density must be larger than n_c to enforce a right-ramp n_c crossing. The right ramp falls back to linear.');
-        return { alpha: 0, fallback: true };
-      }
-      const alpha = solveMonotone((a) => normalizedExp(1 - tNc, a), ratio);
+      const distanceRatio = params.decayNcDistance / params.decayLength;
+      const target = (PHYSICS.nc - np) / delta;
+      const alpha = solveDistanceAlpha(distanceRatio, target);
       if (alpha === null) {
-        statusMessages.push('The right exponential n_c-crossing constraint could not be solved. The right ramp falls back to linear.');
+        statusMessages.push('The right n_c-distance constraint has no real exponential solution for the current plateau density, right end density, and chosen distance. Falling back to linear.');
         return { alpha: 0, fallback: true };
+      }
+      if (distanceRatio > 1) {
+        statusMessages.push('The right n_c distance is longer than the visible ramp, so it is treated as an extrapolated continuation used only to set the exponential coefficient.');
       }
       return { alpha, fallback: false };
     }
 
-    function rampAreaFactor(enabled, mode, alpha, effectiveMode) {
-      if (!enabled) return 0;
-      if (effectiveMode === 'linear') return 0.5;
-      return areaFraction(alpha);
-    }
-
-    function expCrossingFraction(ratio, alpha) {
-      if (!(ratio > 0 && ratio < 1)) return null;
+    function inverseNormalizedExp(ratio, alpha) {
+      if (!(ratio >= 0 && ratio <= 1)) return null;
       if (Math.abs(alpha) < 1e-10) return ratio;
-      const value = 1 + ratio * (Math.exp(alpha) - 1);
-      if (!(value > 0)) return null;
-      return Math.log(value) / alpha;
+      const inside = 1 + ratio * Math.expm1(alpha);
+      if (!(inside > 0) || !Number.isFinite(inside)) return null;
+      return Math.log(inside) / alpha;
     }
 
-    function computeNCrossings(params, effectiveRiseMode, alphaL, effectiveDecayMode, alphaR, plateauStart, plateauEnd, statusMessages) {
-      const ratio = PHYSICS.nc / params.plateauDensitySI;
+    function actualCrossingT(startValue, endValue, alpha, effectiveMode) {
+      const delta = endValue - startValue;
+      if (Math.abs(delta) < 1e-18 * Math.max(Math.abs(endValue), Math.abs(startValue), 1)) return null;
+      const ratio = (PHYSICS.nc - startValue) / delta;
+      if (!(ratio >= 0 && ratio <= 1)) return null;
+      if (effectiveMode === 'linear') return ratio;
+      return inverseNormalizedExp(ratio, alpha);
+    }
+
+    function buildCrossings(params, profile, statusMessages) {
       const result = {
-        ratio,
-        left: null,
-        right: null,
-        plateauMid: 0.5 * (plateauStart + plateauEnd)
+        leftActual: null,
+        rightActual: null,
+        leftConstraint: null,
+        rightConstraint: null,
+        plateauMid: 0.5 * (profile.plateauStart + profile.plateauEnd)
       };
 
-      if (!(ratio > 0 && ratio <= 1)) {
-        statusMessages.push('The plateau density is not above n_c, so the usual left/right n_c ramp crossings are not defined.');
-        return result;
-      }
-
       if (params.leftRampEnabled) {
-        if (effectiveRiseMode === 'linear') {
-          result.left = params.profileStartX + params.riseLength * ratio;
-        } else {
-          const frac = expCrossingFraction(ratio, alphaL);
-          if (frac !== null) result.left = params.profileStartX + params.riseLength * frac;
+        const tActual = actualCrossingT(params.leftStartDensitySI, params.plateauDensitySI, profile.alphaL, profile.effectiveRiseMode);
+        if (tActual !== null) result.leftActual = params.profileStartX + params.riseLength * tActual;
+        if (params.riseMode === 'exp' && params.riseExpMode === 'nc' && !profile.leftFallback) {
+          result.leftConstraint = params.profileStartX + params.riseNcDistance;
+          if (result.leftActual === null) {
+            statusMessages.push('The left n_c location shown in the summary is extrapolated and is not an actual crossing on the displayed profile.');
+          }
         }
       } else {
-        statusMessages.push('The left ramp is disabled, so there is no continuous left-side n_c crossing to annotate.');
+        statusMessages.push('The left ramp is disabled, so there is no continuous left-side ramp crossing to annotate.');
       }
 
       if (params.rightRampEnabled) {
-        if (effectiveDecayMode === 'linear') {
-          result.right = plateauEnd + params.decayLength * (1 - ratio);
-        } else {
-          const frac = expCrossingFraction(ratio, alphaR);
-          if (frac !== null) result.right = plateauEnd + params.decayLength * (1 - frac);
+        const tActual = actualCrossingT(params.plateauDensitySI, params.rightEndDensitySI, profile.alphaR, profile.effectiveDecayMode);
+        if (tActual !== null) result.rightActual = profile.plateauEnd + params.decayLength * tActual;
+        if (params.decayMode === 'exp' && params.decayExpMode === 'nc' && !profile.rightFallback) {
+          result.rightConstraint = profile.plateauEnd + params.decayNcDistance;
+          if (result.rightActual === null) {
+            statusMessages.push('The right n_c location shown in the summary is extrapolated and is not an actual crossing on the displayed profile.');
+          }
         }
       } else {
-        statusMessages.push('The right ramp is disabled, so there is no continuous right-side n_c crossing to annotate.');
+        statusMessages.push('The right ramp is disabled, so there is no continuous right-side ramp crossing to annotate.');
       }
 
       return result;
@@ -1425,16 +1532,15 @@
 
     function buildDensityProfile(params) {
       const statusMessages = [];
-      const riseSolution = riseAlpha(params, statusMessages);
-      const decaySolution = decayAlpha(params, statusMessages);
-      const alphaL = riseSolution.alpha;
-      const alphaR = decaySolution.alpha;
-      const effectiveRiseMode = (params.leftRampEnabled && params.riseMode === 'exp' && riseSolution.fallback) ? 'linear' : params.riseMode;
-      const effectiveDecayMode = (params.rightRampEnabled && params.decayMode === 'exp' && decaySolution.fallback) ? 'linear' : params.decayMode;
+      const leftSolution = solveLeftAlpha(params, statusMessages);
+      const rightSolution = solveRightAlpha(params, statusMessages);
+      const alphaL = leftSolution.alpha;
+      const alphaR = rightSolution.alpha;
+      const effectiveRiseMode = (params.leftRampEnabled && params.riseMode === 'exp' && leftSolution.fallback) ? 'linear' : params.riseMode;
+      const effectiveDecayMode = (params.rightRampEnabled && params.decayMode === 'exp' && rightSolution.fallback) ? 'linear' : params.decayMode;
 
       const leftRampLength = params.leftRampEnabled ? params.riseLength : 0;
       const rightRampLength = params.rightRampEnabled ? params.decayLength : 0;
-
       const plateauStart = params.profileStartX + leftRampLength;
       const plateauEnd = plateauStart + params.plateauLength;
       const profileEnd = plateauEnd + rightRampLength;
@@ -1442,7 +1548,6 @@
       const xMinData = Math.min(params.xDisplayMin, params.profileStartX - Math.max(5, 0.05 * Math.max(profileEnd - params.profileStartX, 20)));
       const xMaxData = Math.max(params.xDisplayMax, profileEnd + Math.max(5, 0.08 * Math.max(profileEnd - params.profileStartX, 20)));
       const nPoints = Math.round(params.samples);
-
       const x = [];
       const ySI = [];
 
@@ -1453,9 +1558,9 @@
         if (params.leftRampEnabled && xi >= params.profileStartX && xi <= plateauStart) {
           const t = params.riseLength > 0 ? (xi - params.profileStartX) / params.riseLength : 1;
           if (effectiveRiseMode === 'linear') {
-            yi = params.plateauDensitySI * t;
+            yi = params.leftStartDensitySI + (params.plateauDensitySI - params.leftStartDensitySI) * t;
           } else {
-            yi = params.plateauDensitySI * normalizedExp(t, alphaL);
+            yi = params.leftStartDensitySI + (params.plateauDensitySI - params.leftStartDensitySI) * normalizedExp(t, alphaL);
           }
         } else if (!params.leftRampEnabled && xi >= params.profileStartX && xi <= plateauStart) {
           yi = params.plateauDensitySI;
@@ -1464,9 +1569,9 @@
         } else if (params.rightRampEnabled && xi >= plateauEnd && xi <= profileEnd) {
           const t = params.decayLength > 0 ? (xi - plateauEnd) / params.decayLength : 1;
           if (effectiveDecayMode === 'linear') {
-            yi = params.plateauDensitySI * Math.max(0, 1 - t);
+            yi = params.plateauDensitySI + (params.rightEndDensitySI - params.plateauDensitySI) * t;
           } else {
-            yi = params.plateauDensitySI * normalizedExp(1 - t, alphaR);
+            yi = params.plateauDensitySI + (params.rightEndDensitySI - params.plateauDensitySI) * normalizedExp(t, alphaR);
           }
         } else {
           yi = 0;
@@ -1476,14 +1581,12 @@
         ySI.push(Math.max(yi, 0));
       }
 
-      const areaDimensionless = rampAreaFactor(params.leftRampEnabled, params.riseMode, alphaL, effectiveRiseMode) * params.riseLength
-        + params.plateauLength
-        + rampAreaFactor(params.rightRampEnabled, params.decayMode, alphaR, effectiveDecayMode) * params.decayLength;
-
+      const leftFactor = params.leftRampEnabled ? leftAreaFactor(params.leftStartDensitySI / params.plateauDensitySI, alphaL, effectiveRiseMode) : 0;
+      const rightFactor = params.rightRampEnabled ? rightAreaFactor(params.rightEndDensitySI / params.plateauDensitySI, alphaR, effectiveDecayMode) : 0;
+      const areaDimensionless = leftFactor * params.riseLength + params.plateauLength + rightFactor * params.decayLength;
       const arealDensitySI = params.plateauDensitySI * areaDimensionless * 1e-6;
-      const crossings = computeNCrossings(params, effectiveRiseMode, alphaL, effectiveDecayMode, alphaR, plateauStart, plateauEnd, statusMessages);
 
-      return {
+      const profile = {
         x,
         ySI,
         alphaL,
@@ -1498,9 +1601,15 @@
         areaDimensionless,
         arealDensitySI,
         arealDensityCM2: arealDensitySI / 1e4,
-        crossings,
-        plateauMidX: crossings.plateauMid
+        leftFallback: leftSolution.fallback,
+        rightFallback: rightSolution.fallback,
+        leftFactor,
+        rightFactor
       };
+
+      profile.crossings = buildCrossings(params, profile, statusMessages);
+      profile.plateauMidX = profile.crossings.plateauMid;
+      return profile;
     }
 
     function annotationPlugin() {
@@ -1508,20 +1617,16 @@
         id: 'profileAnnotations',
         afterDatasetsDraw(chart) {
           if (state.annotations !== 'on' || !latestProfile) return;
-
           const { ctx, chartArea, scales } = chart;
           if (!chartArea || !scales.x || !scales.y) return;
-
-          const ratio = latestProfile.crossings.ratio;
-          if (!(ratio > 0 && ratio <= 1)) return;
 
           const xScale = scales.x;
           const yScale = scales.y;
           const plateauDisplay = toDisplayDensity(state.plateauDensitySI);
-          const plateauYForLinear = Math.min(plateauDisplay, yScale.max || plateauDisplay);
+          const ncDisplay = toDisplayDensity(PHYSICS.nc);
           const plateauY = yScale.type === 'logarithmic'
-            ? Math.max(toDisplayDensity(PHYSICS.nc) * 2.2, plateauDisplay / 1.35)
-            : Math.min((yScale.max || plateauYForLinear) * 0.94, plateauYForLinear);
+            ? Math.max(ncDisplay * 2.2, plateauDisplay / 1.35, yScale.min * 1.2)
+            : Math.min((yScale.max || plateauDisplay) * 0.94, plateauDisplay);
 
           ctx.save();
 
@@ -1535,7 +1640,7 @@
             ctx.closePath();
           }
 
-          function drawLabel(text, px, py, align = 'center') {
+          function drawLabel(text, px, py, align = 'center', outline = rgbaFromHex(state.lineColor, 0.32)) {
             ctx.font = '700 12px Inter, system-ui, sans-serif';
             const padX = 8;
             const padY = 6;
@@ -1551,7 +1656,7 @@
             ctx.fillStyle = 'rgba(255,255,255,0.93)';
             ctx.fill();
             ctx.lineWidth = 1;
-            ctx.strokeStyle = rgbaFromHex(state.lineColor, 0.32);
+            ctx.strokeStyle = outline;
             ctx.stroke();
             ctx.fillStyle = '#24364b';
             ctx.textAlign = 'center';
@@ -1559,10 +1664,10 @@
             ctx.fillText(text, x + w / 2, y + h / 2 + 0.5);
           }
 
-          function drawCrossing(xVal, label, topOffset) {
+          function drawActualCrossing(xVal, label, topOffset) {
             if (xVal === null || xVal < xScale.min || xVal > xScale.max) return;
             const px = xScale.getPixelForValue(xVal);
-            const pyNc = yScale.getPixelForValue(Math.max(toDisplayDensity(PHYSICS.nc), yScale.min || toDisplayDensity(PHYSICS.nc)));
+            const pyNc = yScale.getPixelForValue(Math.max(ncDisplay, yScale.min || ncDisplay));
             ctx.setLineDash([5, 5]);
             ctx.strokeStyle = rgbaFromHex(state.lineColor, 0.65);
             ctx.lineWidth = 1.2;
@@ -1578,11 +1683,33 @@
             drawLabel(label, px, chartArea.top + topOffset, 'center');
           }
 
+          function drawExtrapolatedMarker(xVal, label, topOffset) {
+            if (xVal === null || xVal < xScale.min || xVal > xScale.max) return;
+            const px = xScale.getPixelForValue(xVal);
+            ctx.setLineDash([3, 6]);
+            ctx.strokeStyle = 'rgba(243,119,38,0.72)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(px, chartArea.top + 8);
+            ctx.lineTo(px, chartArea.bottom - 8);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            drawLabel(label, px, chartArea.top + topOffset, 'center', 'rgba(243,119,38,0.30)');
+          }
+
           const plateauPx = xScale.getPixelForValue(latestProfile.plateauMidX);
           const plateauPy = yScale.getPixelForValue(Math.max(plateauY, yScale.min || plateauY));
           drawLabel(`plateau = ${formatRatio(state.plateauDensitySI / PHYSICS.nc, 4)} n_c`, plateauPx, plateauPy - 34);
-          drawCrossing(latestProfile.crossings.left, `left n_c: x = ${latestProfile.crossings.left?.toFixed(3)} μm`, 10);
-          drawCrossing(latestProfile.crossings.right, `right n_c: x = ${latestProfile.crossings.right?.toFixed(3)} μm`, 42);
+
+          drawActualCrossing(latestProfile.crossings.leftActual, `left n_c: x = ${latestProfile.crossings.leftActual?.toFixed(3)} μm`, 10);
+          drawActualCrossing(latestProfile.crossings.rightActual, `right n_c: x = ${latestProfile.crossings.rightActual?.toFixed(3)} μm`, 42);
+
+          if (latestProfile.crossings.leftActual === null && latestProfile.crossings.leftConstraint !== null) {
+            drawExtrapolatedMarker(latestProfile.crossings.leftConstraint, `left extrapolated n_c: x = ${latestProfile.crossings.leftConstraint.toFixed(3)} μm`, 10);
+          }
+          if (latestProfile.crossings.rightActual === null && latestProfile.crossings.rightConstraint !== null) {
+            drawExtrapolatedMarker(latestProfile.crossings.rightConstraint, `right extrapolated n_c: x = ${latestProfile.crossings.rightConstraint.toFixed(3)} μm`, 42);
+          }
 
           ctx.restore();
         }
@@ -1629,7 +1756,7 @@
               padding: 12,
               callbacks: {
                 title: (items) => `x = ${items[0].parsed.x.toFixed(3)} μm`,
-                label: (ctx) => `n_e = ${formatSci(ctx.parsed.y, 4)} ${densityUnitText()}`
+                label: (ctx) => `n_e = ${scientificTick(ctx.parsed.y)} ${densityUnitText()}`
               }
             }
           },
@@ -1728,8 +1855,6 @@
         chart.options.scales.y.title.text = `Plasma density (${densityUnitText()})`;
         chart.options.scales.x.min = state.xDisplayMin;
         chart.options.scales.x.max = state.xDisplayMax;
-        chart.options.scales.x.ticks.color = '#607289';
-        chart.options.scales.y.ticks.color = '#607289';
       });
 
       charts.linear.options.scales.y.min = latestChartState.linear.yMin;
@@ -1739,7 +1864,6 @@
 
       charts.linear.update();
       charts.log.update();
-
       dom.linearUnitLabel.textContent = `Density in ${densityUnitText()}`;
       dom.logUnitLabel.textContent = `Density in ${densityUnitText()}`;
     }
@@ -1750,9 +1874,7 @@
 
     async function typesetElements(elements) {
       if (!(window.MathJax && window.MathJax.typesetPromise)) return;
-      if (window.MathJax.typesetClear) {
-        MathJax.typesetClear(elements);
-      }
+      if (window.MathJax.typesetClear) MathJax.typesetClear(elements);
       const token = ++mathRenderToken;
       await MathJax.typesetPromise(elements);
       if (token !== mathRenderToken) return;
@@ -1760,7 +1882,6 @@
 
     function updateDerivedValues() {
       const ncSI = PHYSICS.nc;
-      const waterSI = waterElectronDensitySI();
       const chSI = chElectronDensitySI(state.chDensity);
 
       setFormulaHTML(dom.metricNcFormula, tex`
@@ -1782,12 +1903,13 @@
         $$
       `);
 
-      setFormulaHTML(dom.metricWaterFormula, tex`
+      setFormulaHTML(dom.metricEdgesFormula, tex`
         $$
         \begin{aligned}
-        n_{e,\mathrm{water}} &= ${latexNumber(waterSI)} \, \mathrm{m^{-3}} \\
-                              &= ${latexNumber(waterSI / 1e6)} \, \mathrm{cm^{-3}} \\
-        \frac{n_{e,\mathrm{water}}}{n_c} &= ${formatRatio(waterSI / ncSI, 4)}
+        n_{L0} &= ${latexNumber(state.leftStartDensitySI)} \, \mathrm{m^{-3}} \\
+        \frac{n_{L0}}{n_c} &= ${formatRatio(state.leftStartDensitySI / ncSI, 4)} \\
+        n_{R1} &= ${latexNumber(state.rightEndDensitySI)} \, \mathrm{m^{-3}} \\
+        \frac{n_{R1}}{n_c} &= ${formatRatio(state.rightEndDensitySI / ncSI, 4)}
         \end{aligned}
         $$
       `);
@@ -1816,14 +1938,14 @@
       const leftExpr = !state.leftRampEnabled
         ? '0'
         : profile.effectiveRiseMode === 'linear'
-          ? tex`n_p \, \frac{x-x_0}{L_L}`
-          : tex`n_p \, \frac{e^{${profile.alphaL.toFixed(5)} \, (x-x_0)/L_L}-1}{e^{${profile.alphaL.toFixed(5)}}-1}`;
+          ? tex`n_{L0} + (n_p-n_{L0}) \\frac{x-x_0}{L_L}`
+          : tex`n_{L0} + (n_p-n_{L0}) \\frac{e^{${profile.alphaL.toFixed(5)} (x-x_0)/L_L}-1}{e^{${profile.alphaL.toFixed(5)}}-1}`;
 
       const rightExpr = !state.rightRampEnabled
         ? '0'
         : profile.effectiveDecayMode === 'linear'
-          ? tex`n_p \left(1-\frac{x-x_2}{L_R}\right)`
-          : tex`n_p \, \frac{e^{${profile.alphaR.toFixed(5)}\left(1-\frac{x-x_2}{L_R}\right)}-1}{e^{${profile.alphaR.toFixed(5)}}-1}`;
+          ? tex`n_p + (n_{R1}-n_p) \\frac{x-x_2}{L_R}`
+          : tex`n_p + (n_{R1}-n_p) \\frac{e^{${profile.alphaR.toFixed(5)} (x-x_2)/L_R}-1}{e^{${profile.alphaR.toFixed(5)}}-1}`;
 
       if (!state.leftRampEnabled && !state.rightRampEnabled) {
         return tex`
@@ -1866,7 +1988,8 @@
         $$
         \begin{aligned}
         L_L &= ${LL} \, \mu\mathrm{m}, & L_P &= ${LP} \, \mu\mathrm{m} \\
-        L_R &= ${LR} \, \mu\mathrm{m}
+        L_R &= ${LR} \, \mu\mathrm{m}, & n_{L0} &= ${latexNumber(state.leftStartDensitySI)} \, \mathrm{m^{-3}} \\
+        n_{R1} &= ${latexNumber(state.rightEndDensitySI)} \, \mathrm{m^{-3}}
         \end{aligned}
         $$
       `;
@@ -1877,13 +2000,10 @@
       const waterSI = waterElectronDensitySI();
       const chSI = chElectronDensitySI(state.chDensity);
 
-      const leftCrossLatex = profile.crossings.left === null
-        ? tex`\text{not available}`
-        : tex`${profile.crossings.left.toFixed(4)} \, \mu\mathrm{m}`;
-
-      const rightCrossLatex = profile.crossings.right === null
-        ? tex`\text{not available}`
-        : tex`${profile.crossings.right.toFixed(4)} \, \mu\mathrm{m}`;
+      const leftActualLatex = profile.crossings.leftActual === null ? tex`\text{not on displayed ramp}` : tex`${profile.crossings.leftActual.toFixed(4)} \, \mu\mathrm{m}`;
+      const rightActualLatex = profile.crossings.rightActual === null ? tex`\text{not on displayed ramp}` : tex`${profile.crossings.rightActual.toFixed(4)} \, \mu\mathrm{m}`;
+      const leftConstraintLatex = profile.crossings.leftConstraint === null ? tex`\text{not set}` : tex`${profile.crossings.leftConstraint.toFixed(4)} \, \mu\mathrm{m}`;
+      const rightConstraintLatex = profile.crossings.rightConstraint === null ? tex`\text{not set}` : tex`${profile.crossings.rightConstraint.toFixed(4)} \, \mu\mathrm{m}`;
 
       const physicsLatex = tex`
         $$
@@ -1914,13 +2034,9 @@
 
         $$
         \begin{aligned}
-        n_{e,\mathrm{CH}}
-          &= 7 \, \frac{\rho_{\mathrm{CH}}}{13 \, \mathrm{g \, mol^{-1}}} N_A \\
-          &= ${latexNumber(chSI)} \, \mathrm{m^{-3}} \\
-        \frac{n_{e,\mathrm{CH}}}{n_c}
-          &= ${formatRatio(chSI / ncSI, 4)} \\
-        \rho_{\mathrm{CH}}
-          &= ${state.chDensity.toFixed(3)} \, \mathrm{g \, cm^{-3}}
+        n_{e,\mathrm{CH}} &= ${latexNumber(chSI)} \, \mathrm{m^{-3}} \\
+        \frac{n_{e,\mathrm{CH}}}{n_c} &= ${formatRatio(chSI / ncSI, 4)} \\
+        \rho_{\mathrm{CH}} &= ${state.chDensity.toFixed(3)} \, \mathrm{g \, cm^{-3}}
         \end{aligned}
         $$
       `;
@@ -1931,8 +2047,17 @@
         $$
         \begin{aligned}
         \frac{n_p}{n_c} &= ${formatRatio(state.plateauDensitySI / PHYSICS.nc, 4)} \\
-        x_{L,\,n_c} &= ${leftCrossLatex} \\
-        x_{R,\,n_c} &= ${rightCrossLatex}
+        \frac{n_{L0}}{n_c} &= ${formatRatio(state.leftStartDensitySI / PHYSICS.nc, 4)} \\
+        \frac{n_{R1}}{n_c} &= ${formatRatio(state.rightEndDensitySI / PHYSICS.nc, 4)}
+        \end{aligned}
+        $$
+
+        $$
+        \begin{aligned}
+        x_{L,n_c}^{\mathrm{actual}} &= ${leftActualLatex} \\
+        x_{L,n_c}^{\mathrm{constraint}} &= ${leftConstraintLatex} \\
+        x_{R,n_c}^{\mathrm{actual}} &= ${rightActualLatex} \\
+        x_{R,n_c}^{\mathrm{constraint}} &= ${rightConstraintLatex}
         \end{aligned}
         $$
 
@@ -1945,20 +2070,15 @@
         $$
 
         $$
-        \frac{\mathcal{N}}{n_c \cdot 1 \, \mu\mathrm{m}} = ${formatRatio(profile.arealDensitySI / (PHYSICS.nc * 1e-6), 4)}
-        $$
-
-        $$
         \begin{aligned}
-        \alpha_L &= ${profile.alphaL.toFixed(5)} \\
-        \alpha_R &= ${profile.alphaR.toFixed(5)}
+        f_L &= ${formatRatio(profile.leftFactor, 6)}, & f_R &= ${formatRatio(profile.rightFactor, 6)} \\
+        \alpha_L &= ${profile.alphaL.toFixed(5)}, & \alpha_R &= ${profile.alphaR.toFixed(5)}
         \end{aligned}
         $$
       `;
 
       dom.physicsMath.innerHTML = physicsLatex;
       dom.profileMath.innerHTML = profileLatex;
-
       dom.statusList.innerHTML = '';
       profile.statusMessages.forEach((msg) => {
         const div = document.createElement('div');
@@ -1970,7 +2090,7 @@
       await typesetElements([
         dom.metricNcFormula,
         dom.metricPlateauFormula,
-        dom.metricWaterFormula,
+        dom.metricEdgesFormula,
         dom.metricChFormula,
         dom.physicsMath,
         dom.profileMath
@@ -1997,7 +2117,7 @@
       return Math.max(108, text.length * 7.1 + 20);
     }
 
-    function makeSvgLabel(text, x, y, align = 'middle') {
+    function makeSvgLabel(text, x, y, align = 'middle', outline = rgbaFromHex(state.lineColor, 0.32)) {
       const width = estimateLabelWidth(text);
       const height = 28;
       let rectX = x - width / 2;
@@ -2008,7 +2128,7 @@
       const textY = rectY + height / 2 + 0.5;
       return `
         <g>
-          <rect x="${rectX.toFixed(2)}" y="${rectY.toFixed(2)}" width="${width.toFixed(2)}" height="${height}" rx="9" ry="9" fill="rgba(255,255,255,0.93)" stroke="${svgEscape(rgbaFromHex(state.lineColor, 0.32))}" stroke-width="1"/>
+          <rect x="${rectX.toFixed(2)}" y="${rectY.toFixed(2)}" width="${width.toFixed(2)}" height="${height}" rx="9" ry="9" fill="rgba(255,255,255,0.93)" stroke="${svgEscape(outline)}" stroke-width="1"/>
           <text x="${textX.toFixed(2)}" y="${textY.toFixed(2)}" font-size="12" font-weight="700" text-anchor="middle" fill="#24364b">${svgEscape(text)}</text>
         </g>`;
     }
@@ -2036,7 +2156,6 @@
     function buildAreaPaths(points, mapX, mapY, baselineY) {
       const paths = [];
       let segment = [];
-
       const flushSegment = () => {
         if (!segment.length) return;
         let d = `M ${mapX(segment[0].x).toFixed(2)} ${baselineY.toFixed(2)}`;
@@ -2047,7 +2166,6 @@
         paths.push(d);
         segment = [];
       };
-
       points.forEach((point) => {
         if (point.y === null || !Number.isFinite(point.y)) {
           flushSegment();
@@ -2057,6 +2175,33 @@
       });
       flushSegment();
       return paths;
+    }
+
+    function niceLinearTicks(min, max, target = 6) {
+      const span = Math.max(max - min, 1e-12);
+      const rough = span / Math.max(target, 1);
+      const exp = Math.floor(Math.log10(Math.abs(rough)));
+      const base = rough / (10 ** exp);
+      let step = 1;
+      if (base > 1 && base <= 2) step = 2;
+      else if (base > 2 && base <= 5) step = 5;
+      else if (base > 5) step = 10;
+      step *= 10 ** exp;
+      const ticks = [];
+      const start = Math.ceil(min / step) * step;
+      for (let value = start; value <= max + step * 0.5; value += step) {
+        ticks.push(Number(value.toPrecision(12)));
+      }
+      if (min === 0 && !ticks.includes(0)) ticks.unshift(0);
+      return ticks.filter((value) => value >= min - step * 1e-6 && value <= max + step * 1e-6);
+    }
+
+    function niceLogTicks(min, max) {
+      const ticks = [];
+      const start = Math.ceil(Math.log10(min));
+      const end = Math.floor(Math.log10(max));
+      for (let exp = start; exp <= end; exp += 1) ticks.push(10 ** exp);
+      return ticks;
     }
 
     function createChartSvg(which) {
@@ -2075,9 +2220,7 @@
       const strokeDash = dashedStrokeValue(state.lineStyle);
       const bgFill = state.bg === 'white' ? '#ffffff' : 'none';
       const xTicks = niceLinearTicks(snapshot.xMin, snapshot.xMax, 6);
-      const yTicks = snapshot.scaleType === 'linear'
-        ? niceLinearTicks(snapshot.yMin, snapshot.yMax, 6)
-        : niceLogTicks(snapshot.yMin, snapshot.yMax);
+      const yTicks = snapshot.scaleType === 'linear' ? niceLinearTicks(snapshot.yMin, snapshot.yMax, 6) : niceLogTicks(snapshot.yMin, snapshot.yMax);
 
       const mapX = (value) => margin.left + (value - snapshot.xMin) / (snapshot.xMax - snapshot.xMin) * plotWidth;
       const mapY = snapshot.scaleType === 'linear'
@@ -2091,44 +2234,40 @@
       const baselineY = mapY(snapshot.scaleType === 'linear' ? snapshot.yMin : snapshot.yMin);
       const linePath = buildPathFromPoints(snapshot.data, mapX, mapY);
       const areaPaths = buildAreaPaths(snapshot.data, mapX, mapY, baselineY);
-      const gridLinesX = xTicks.map((tick) => `
-        <line x1="${mapX(tick).toFixed(2)}" y1="${margin.top}" x2="${mapX(tick).toFixed(2)}" y2="${plotBottom.toFixed(2)}" stroke="#e5ecf4" stroke-width="1"/>`).join('');
-      const gridLinesY = yTicks.map((tick) => `
-        <line x1="${margin.left}" y1="${mapY(tick).toFixed(2)}" x2="${plotRight.toFixed(2)}" y2="${mapY(tick).toFixed(2)}" stroke="#e5ecf4" stroke-width="1"/>`).join('');
-      const xTickLabels = xTicks.map((tick) => `
-        <g>
-          <line x1="${mapX(tick).toFixed(2)}" y1="${plotBottom.toFixed(2)}" x2="${mapX(tick).toFixed(2)}" y2="${(plotBottom + 7).toFixed(2)}" stroke="#607289" stroke-width="1.2"/>
-          <text x="${mapX(tick).toFixed(2)}" y="${(plotBottom + 28).toFixed(2)}" font-size="14" fill="#607289" text-anchor="middle">${svgEscape(Number(tick.toFixed(4)).toString())}</text>
-        </g>`).join('');
-      const yTickLabels = yTicks.map((tick) => `
-        <g>
-          <line x1="${(margin.left - 7).toFixed(2)}" y1="${mapY(tick).toFixed(2)}" x2="${margin.left.toFixed(2)}" y2="${mapY(tick).toFixed(2)}" stroke="#607289" stroke-width="1.2"/>
-          <text x="${(margin.left - 12).toFixed(2)}" y="${(mapY(tick) + 4.5).toFixed(2)}" font-size="14" fill="#607289" text-anchor="end">${svgEscape(scientificTick(tick))}</text>
-        </g>`).join('');
+      const gridLinesX = xTicks.map((tick) => `<line x1="${mapX(tick).toFixed(2)}" y1="${margin.top}" x2="${mapX(tick).toFixed(2)}" y2="${plotBottom.toFixed(2)}" stroke="#e5ecf4" stroke-width="1"/>`).join('');
+      const gridLinesY = yTicks.map((tick) => `<line x1="${margin.left}" y1="${mapY(tick).toFixed(2)}" x2="${plotRight.toFixed(2)}" y2="${mapY(tick).toFixed(2)}" stroke="#e5ecf4" stroke-width="1"/>`).join('');
+      const xTickLabels = xTicks.map((tick) => `<g><line x1="${mapX(tick).toFixed(2)}" y1="${plotBottom.toFixed(2)}" x2="${mapX(tick).toFixed(2)}" y2="${(plotBottom + 7).toFixed(2)}" stroke="#607289" stroke-width="1.2"/><text x="${mapX(tick).toFixed(2)}" y="${(plotBottom + 28).toFixed(2)}" font-size="14" fill="#607289" text-anchor="middle">${svgEscape(Number(tick.toFixed(4)).toString())}</text></g>`).join('');
+      const yTickLabels = yTicks.map((tick) => `<g><line x1="${(margin.left - 7).toFixed(2)}" y1="${mapY(tick).toFixed(2)}" x2="${margin.left.toFixed(2)}" y2="${mapY(tick).toFixed(2)}" stroke="#607289" stroke-width="1.2"/><text x="${(margin.left - 12).toFixed(2)}" y="${(mapY(tick) + 4.5).toFixed(2)}" font-size="14" fill="#607289" text-anchor="end">${svgEscape(scientificTick(tick))}</text></g>`).join('');
 
       let annotations = '';
-      const ratio = latestProfile.crossings.ratio;
-      if (state.annotations === 'on' && ratio > 0 && ratio <= 1) {
-        const ncY = mapY(Math.max(toDisplayDensity(PHYSICS.nc), snapshot.yMin));
-        const plateauYValue = snapshot.scaleType === 'logarithmic'
-          ? Math.max(toDisplayDensity(PHYSICS.nc) * 2.2, toDisplayDensity(state.plateauDensitySI) / 1.35)
-          : Math.min(snapshot.yMax * 0.94, toDisplayDensity(state.plateauDensitySI));
-        const plateauLabelY = Math.max(margin.top + 6, mapY(Math.min(Math.max(plateauYValue, snapshot.yMin), snapshot.yMax)) - 38);
-        annotations += makeSvgLabel(`plateau = ${formatRatio(state.plateauDensitySI / PHYSICS.nc, 4)} n_c`, mapX(latestProfile.plateauMidX), plateauLabelY, 'middle');
+      const plateauDisplay = toDisplayDensity(state.plateauDensitySI);
+      const ncDisplay = toDisplayDensity(PHYSICS.nc);
+      const plateauYValue = snapshot.scaleType === 'logarithmic' ? Math.max(ncDisplay * 2.2, plateauDisplay / 1.35, snapshot.yMin * 1.2) : Math.min(snapshot.yMax * 0.94, plateauDisplay);
+      const plateauLabelY = Math.max(margin.top + 6, mapY(Math.min(Math.max(plateauYValue, snapshot.yMin), snapshot.yMax)) - 38);
+      annotations += makeSvgLabel(`plateau = ${formatRatio(state.plateauDensitySI / PHYSICS.nc, 4)} n_c`, mapX(latestProfile.plateauMidX), plateauLabelY, 'middle');
 
-        const drawCrossing = (value, text, offsetY) => {
-          if (value === null || value < snapshot.xMin || value > snapshot.xMax) return '';
-          const px = mapX(value);
-          return `
-            <g>
-              <line x1="${px.toFixed(2)}" y1="${(margin.top + 10).toFixed(2)}" x2="${px.toFixed(2)}" y2="${ncY.toFixed(2)}" stroke="${svgEscape(rgbaFromHex(state.lineColor, 0.65))}" stroke-width="1.2" stroke-dasharray="5 5"/>
-              <circle cx="${px.toFixed(2)}" cy="${ncY.toFixed(2)}" r="3.8" fill="${svgEscape(state.lineColor)}"/>
-              ${makeSvgLabel(text, px, margin.top + offsetY, 'middle')}
-            </g>`;
-        };
+      const drawActual = (value, text, offsetY) => {
+        if (value === null || value < snapshot.xMin || value > snapshot.xMax) return '';
+        const px = mapX(value);
+        const pyNc = mapY(Math.max(ncDisplay, snapshot.yMin));
+        return `<g><line x1="${px.toFixed(2)}" y1="${(margin.top + 10).toFixed(2)}" x2="${px.toFixed(2)}" y2="${pyNc.toFixed(2)}" stroke="${svgEscape(rgbaFromHex(state.lineColor, 0.65))}" stroke-width="1.2" stroke-dasharray="5 5"/><circle cx="${px.toFixed(2)}" cy="${pyNc.toFixed(2)}" r="3.8" fill="${svgEscape(state.lineColor)}"/>${makeSvgLabel(text, px, margin.top + offsetY, 'middle')}</g>`;
+      };
 
-        annotations += drawCrossing(latestProfile.crossings.left, `left n_c: x = ${latestProfile.crossings.left?.toFixed(3)} μm`, 10);
-        annotations += drawCrossing(latestProfile.crossings.right, `right n_c: x = ${latestProfile.crossings.right?.toFixed(3)} μm`, 44);
+      const drawExtrapolated = (value, text, offsetY) => {
+        if (value === null || value < snapshot.xMin || value > snapshot.xMax) return '';
+        const px = mapX(value);
+        return `<g><line x1="${px.toFixed(2)}" y1="${(margin.top + 8).toFixed(2)}" x2="${px.toFixed(2)}" y2="${(plotBottom - 8).toFixed(2)}" stroke="rgba(243,119,38,0.72)" stroke-width="1.2" stroke-dasharray="3 6"/>${makeSvgLabel(text, px, margin.top + offsetY, 'middle', 'rgba(243,119,38,0.30)')}</g>`;
+      };
+
+      if (state.annotations === 'on') {
+        annotations += drawActual(latestProfile.crossings.leftActual, `left n_c: x = ${latestProfile.crossings.leftActual?.toFixed(3)} μm`, 10);
+        annotations += drawActual(latestProfile.crossings.rightActual, `right n_c: x = ${latestProfile.crossings.rightActual?.toFixed(3)} μm`, 44);
+        if (latestProfile.crossings.leftActual === null && latestProfile.crossings.leftConstraint !== null) {
+          annotations += drawExtrapolated(latestProfile.crossings.leftConstraint, `left extrapolated n_c: x = ${latestProfile.crossings.leftConstraint.toFixed(3)} μm`, 10);
+        }
+        if (latestProfile.crossings.rightActual === null && latestProfile.crossings.rightConstraint !== null) {
+          annotations += drawExtrapolated(latestProfile.crossings.rightConstraint, `right extrapolated n_c: x = ${latestProfile.crossings.rightConstraint.toFixed(3)} μm`, 44);
+        }
       }
 
       return `<?xml version="1.0" encoding="UTF-8"?>
@@ -2166,11 +2305,7 @@
 
     function sanitizeFilename(value, fallback = 'plasma-density-profile') {
       const base = String(value || '').trim() || fallback;
-      return base
-        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')
-        .replace(/\s+/g, '_')
-        .replace(/_+/g, '_')
-        .replace(/^_+|_+$/g, '') || fallback;
+      return base.replace(/[<>:"/\\|?*\x00-\x1F]/g, '-').replace(/\s+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '') || fallback;
     }
 
     function baseExportName(which, extension) {
@@ -2181,13 +2316,11 @@
     async function getChartPngBlob(which) {
       const chart = charts[which];
       if (!chart) return null;
-
       const sourceCanvas = chart.canvas;
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = sourceCanvas.width;
       exportCanvas.height = sourceCanvas.height;
       const ctx = exportCanvas.getContext('2d');
-
       if (state.bg === 'white') {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
@@ -2208,7 +2341,7 @@
           return true;
         }
         throw new Error('Clipboard API unavailable');
-      } catch (error) {
+      } catch {
         return false;
       }
     }
@@ -2227,14 +2360,14 @@
           return true;
         }
         throw new Error('Clipboard API unavailable');
-      } catch (error) {
+      } catch {
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(svgText);
             showToast(`${label} SVG markup copied as text because image-SVG clipboard is unavailable here.`);
             return true;
           }
-        } catch (nestedError) {
+        } catch {
           // fall through
         }
         return false;
@@ -2243,7 +2376,6 @@
 
     async function performChartAction(which, format) {
       const label = which === 'linear' ? 'Linear' : 'Log';
-
       if (format === 'png') {
         const blob = await getChartPngBlob(which);
         if (!blob) {
@@ -2290,9 +2422,7 @@
       const magic = new Uint8Array([0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59, 0x01, 0x00]);
       let headerText = headerDict;
       const preambleLength = magic.length + 2;
-      while ((preambleLength + headerText.length + 1) % 16 !== 0) {
-        headerText += ' ';
-      }
+      while ((preambleLength + headerText.length + 1) % 16 !== 0) headerText += ' ';
       headerText += '\n';
       const headerBytes = new TextEncoder().encode(headerText);
       const headerLen = headerBytes.length;
@@ -2313,9 +2443,7 @@
       const magic = new Uint8Array([0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59, 0x01, 0x00]);
       let headerText = headerDict;
       const preambleLength = magic.length + 2;
-      while ((preambleLength + headerText.length + 1) % 16 !== 0) {
-        headerText += ' ';
-      }
+      while ((preambleLength + headerText.length + 1) % 16 !== 0) headerText += ' ';
       headerText += '\n';
       const headerBytes = new TextEncoder().encode(headerText);
       const headerLen = headerBytes.length;
@@ -2326,9 +2454,7 @@
       out[9] = (headerLen >> 8) & 0xff;
       out.set(headerBytes, 10);
       const view = new DataView(buffer, 10 + headerLen);
-      data.forEach((value, index) => {
-        view.setFloat64(index * 8, Number(value), true);
-      });
+      data.forEach((value, index) => view.setFloat64(index * 8, Number(value), true));
       return out;
     }
 
@@ -2369,6 +2495,8 @@
         decay_eq_width_um: state.decayEqWidth,
         left_ramp_enabled: state.leftRampEnabled,
         right_ramp_enabled: state.rightRampEnabled,
+        left_start_density_m3: state.leftStartDensitySI,
+        right_end_density_m3: state.rightEndDensitySI,
         x_display_min_um: state.xDisplayMin,
         x_display_max_um: state.xDisplayMax,
         plateau_density_m3: state.plateauDensitySI,
@@ -2387,12 +2515,16 @@
         latestProfile.plateauEnd,
         latestProfile.profileEnd
       ]));
-      zip.file('x_display_range_um.npy', buildNpyFloat64([state.xDisplayMin, state.xDisplayMax]));
-      zip.file('critical_density_m3.npy', buildNpyFloat64([PHYSICS.nc]));
-      zip.file('plateau_density_m3.npy', buildNpyFloat64([state.plateauDensitySI]));
+      zip.file('edge_densities_m3.npy', buildNpyFloat64([
+        state.leftStartDensitySI,
+        state.plateauDensitySI,
+        state.rightEndDensitySI
+      ]));
       zip.file('crossings_nc_um.npy', buildNpyFloat64([
-        latestProfile.crossings.left ?? Number.NaN,
-        latestProfile.crossings.right ?? Number.NaN
+        latestProfile.crossings.leftActual ?? Number.NaN,
+        latestProfile.crossings.rightActual ?? Number.NaN,
+        latestProfile.crossings.leftConstraint ?? Number.NaN,
+        latestProfile.crossings.rightConstraint ?? Number.NaN
       ]));
       zip.file('areal_density_m2.npy', buildNpyFloat64([latestProfile.arealDensitySI]));
       zip.file('meta_json_utf8.npy', buildNpyUint8(new TextEncoder().encode(JSON.stringify(meta, null, 2))));
@@ -2413,44 +2545,6 @@
       dom.logPngBtn.textContent = `${verb} log PNG`;
       dom.logSvgBtn.textContent = `${verb} log SVG`;
       renderSegmentButtons(dom.actionModeSegment, state.actionMode, 'actionmode');
-    }
-
-    function syncDensityInputsFromState(options = {}) {
-      const { exclude = null, normalizeAll = false } = options;
-      syncLock = true;
-      if (exclude !== 'absolute' || normalizeAll) {
-        dom.plateauDensity.value = formatPlateauDensityInput();
-      }
-      if (exclude !== 'multiple' || normalizeAll) {
-        dom.plateauMultiple.value = formatPlateauMultipleInput();
-      }
-      syncLock = false;
-    }
-
-    function applyPlateauDensityFromAbsolute(commit = false) {
-      if (syncLock) return;
-      const value = parseNonNegativeInput(dom.plateauDensity.value);
-      if (value === null) {
-        if (commit) syncDensityInputsFromState({ normalizeAll: true });
-        return;
-      }
-      state.plateauDensitySI = fromDisplayDensity(value);
-      syncDensityInputsFromState({ exclude: 'absolute' });
-      refreshEverything();
-      if (commit) syncDensityInputsFromState({ normalizeAll: true });
-    }
-
-    function applyPlateauDensityFromMultiple(commit = false) {
-      if (syncLock) return;
-      const value = parseNonNegativeInput(dom.plateauMultiple.value);
-      if (value === null) {
-        if (commit) syncDensityInputsFromState({ normalizeAll: true });
-        return;
-      }
-      state.plateauDensitySI = value * PHYSICS.nc;
-      syncDensityInputsFromState({ exclude: 'multiple' });
-      refreshEverything();
-      if (commit) syncDensityInputsFromState({ normalizeAll: true });
     }
 
     function fitRangeToProfile() {
@@ -2474,7 +2568,9 @@
       state.bg = DEFAULTS.bg;
       state.annotations = DEFAULTS.annotations;
       state.actionMode = DEFAULTS.actionMode;
-      state.plateauDensitySI = DEFAULTS.plateauMultiplier * PHYSICS.nc;
+      state.plateauDensitySI = DEFAULTS.plateauMultiple * PHYSICS.nc;
+      state.leftStartDensitySI = DEFAULTS.leftStartMultiple * PHYSICS.nc;
+      state.rightEndDensitySI = DEFAULTS.rightEndMultiple * PHYSICS.nc;
 
       dom.plotTitle.value = DEFAULTS.title;
       dom.profileStartX.value = DEFAULTS.profileStartX;
@@ -2531,13 +2627,18 @@
         el.addEventListener('change', () => refreshEverything());
       });
 
-      dom.plateauDensity.addEventListener('input', () => applyPlateauDensityFromAbsolute(false));
-      dom.plateauDensity.addEventListener('change', () => applyPlateauDensityFromAbsolute(true));
-      dom.plateauDensity.addEventListener('blur', () => applyPlateauDensityFromAbsolute(true));
-
-      dom.plateauMultiple.addEventListener('input', () => applyPlateauDensityFromMultiple(false));
-      dom.plateauMultiple.addEventListener('change', () => applyPlateauDensityFromMultiple(true));
-      dom.plateauMultiple.addEventListener('blur', () => applyPlateauDensityFromMultiple(true));
+      [
+        [dom.plateauDensity, 'plateau', 'absolute'],
+        [dom.plateauMultiple, 'plateau', 'multiple'],
+        [dom.leftStartDensity, 'left', 'absolute'],
+        [dom.leftStartMultiple, 'left', 'multiple'],
+        [dom.rightEndDensity, 'right', 'absolute'],
+        [dom.rightEndMultiple, 'right', 'multiple']
+      ].forEach(([el, which, mode]) => {
+        el.addEventListener('input', () => applyDensityField(which, mode, false));
+        el.addEventListener('change', () => applyDensityField(which, mode, true));
+        el.addEventListener('blur', () => applyDensityField(which, mode, true));
+      });
 
       dom.unitSegment.addEventListener('click', (event) => {
         const button = event.target.closest('button[data-unit]');

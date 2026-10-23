@@ -1,0 +1,314 @@
+[
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": false,
+      "riseMode": "linear",
+      "decayMode": "linear",
+      "riseExpMode": "linear",
+      "decayExpMode": "linear",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 6.967838851073064e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": false,
+      "riseMode": "linear",
+      "decayMode": "linear",
+      "riseExpMode": "linear",
+      "decayExpMode": "linear",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 6.967838851073064e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": false,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "nc",
+      "decayExpMode": "nc",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 6.967838851073064e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": false,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "nc",
+      "decayExpMode": "nc",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 6.967838851073064e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": false,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "area",
+      "decayExpMode": "area",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 6.967838851073064e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": false,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "area",
+      "decayExpMode": "area",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 6.967838851073064e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": true,
+      "riseMode": "linear",
+      "decayMode": "linear",
+      "riseExpMode": "linear",
+      "decayExpMode": "linear",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 8.274308635649264e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": true,
+      "riseMode": "linear",
+      "decayMode": "linear",
+      "riseExpMode": "linear",
+      "decayExpMode": "linear",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 8.313502729186551e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": true,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "nc",
+      "decayExpMode": "nc",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 7.156971177042013e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": true,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "nc",
+      "decayExpMode": "nc",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 8.313502729186551e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": true,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "area",
+      "decayExpMode": "area",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 8.013014678733603e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": false,
+      "rightRampEnabled": true,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "area",
+      "decayExpMode": "area",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 8.013014678732291e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": false,
+      "riseMode": "linear",
+      "decayMode": "linear",
+      "riseExpMode": "linear",
+      "decayExpMode": "linear",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 8.709798563841331e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": false,
+      "riseMode": "linear",
+      "decayMode": "linear",
+      "riseExpMode": "linear",
+      "decayExpMode": "linear",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 8.744637758096697e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": false,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "nc",
+      "decayExpMode": "nc",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 7.270478518321167e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": false,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "nc",
+      "decayExpMode": "nc",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 8.744637758096697e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": false,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "area",
+      "decayExpMode": "area",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 8.361406621287118e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": false,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "area",
+      "decayExpMode": "area",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 8.361406621287954e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": true,
+      "riseMode": "linear",
+      "decayMode": "linear",
+      "riseExpMode": "linear",
+      "decayExpMode": "linear",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 1.0016268348417531e+25
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": true,
+      "riseMode": "linear",
+      "decayMode": "linear",
+      "riseExpMode": "linear",
+      "decayExpMode": "linear",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 1.0090301636210182e+25
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": true,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "nc",
+      "decayExpMode": "nc",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 7.459610844290116e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": true,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "nc",
+      "decayExpMode": "nc",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 1.0090301636210182e+25
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": true,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "area",
+      "decayExpMode": "area",
+      "leftStartDensitySI": 0,
+      "rightEndDensitySI": 0
+    },
+    "arealDensitySI": 9.406582448947656e+24
+  },
+  {
+    "params": {
+      "leftRampEnabled": true,
+      "rightRampEnabled": true,
+      "riseMode": "exp",
+      "decayMode": "exp",
+      "riseExpMode": "area",
+      "decayExpMode": "area",
+      "leftStartDensitySI": 3.4839194255365324e+27,
+      "rightEndDensitySI": 5.225879138304799e+27
+    },
+    "arealDensitySI": 9.40658244894718e+24
+  }
+]

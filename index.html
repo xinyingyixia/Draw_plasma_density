@@ -1385,14 +1385,10 @@
       renderSegmentButtons(dom.annotationSegment, state.annotations, 'annot');
     }
 
-    function leftAreaFactor(startRatio, alpha, effectiveMode) {
-      if (effectiveMode === 'linear') return 0.5 * (1 + startRatio);
-      return startRatio + (1 - startRatio) * areaFraction(alpha);
-    }
-
-    function rightAreaFactor(endRatio, alpha, effectiveMode) {
-      if (effectiveMode === 'linear') return 0.5 * (1 + endRatio);
-      return 1 + (endRatio - 1) * areaFraction(alpha);
+    function rampMeanDensity(startDensity, endDensity, alpha, effectiveMode) {
+      const fraction = effectiveMode === 'linear' ? 0.5 : areaFraction(alpha);
+      // Integrate the interpolated density directly: no division by plateau density.
+      return startDensity * (1 - fraction) + endDensity * fraction;
     }
 
     function solveLeftAlpha(params, statusMessages) {
@@ -1406,6 +1402,10 @@
       }
 
       if (params.riseExpMode === 'area') {
+        if (np === 0) {
+          statusMessages.push('The left equivalent-area width is defined relative to the plateau density and is undefined at zero plateau density. Falling back to linear.');
+          return { alpha: 0, fallback: true };
+        }
         const fraction = params.riseEqWidth / params.riseLength;
         const startRatio = n0 / np;
         const denom = 1 - startRatio;
@@ -1446,6 +1446,10 @@
       }
 
       if (params.decayExpMode === 'area') {
+        if (np === 0) {
+          statusMessages.push('The right equivalent-area width is defined relative to the plateau density and is undefined at zero plateau density. Falling back to linear.');
+          return { alpha: 0, fallback: true };
+        }
         const fraction = params.decayEqWidth / params.decayLength;
         const endRatio = ne / np;
         const denom = endRatio - 1;
@@ -1581,10 +1585,14 @@
         ySI.push(Math.max(yi, 0));
       }
 
-      const leftFactor = params.leftRampEnabled ? leftAreaFactor(params.leftStartDensitySI / params.plateauDensitySI, alphaL, effectiveRiseMode) : 0;
-      const rightFactor = params.rightRampEnabled ? rightAreaFactor(params.rightEndDensitySI / params.plateauDensitySI, alphaR, effectiveDecayMode) : 0;
-      const areaDimensionless = leftFactor * params.riseLength + params.plateauLength + rightFactor * params.decayLength;
-      const arealDensitySI = params.plateauDensitySI * areaDimensionless * 1e-6;
+      const leftMean = params.leftRampEnabled ? rampMeanDensity(params.leftStartDensitySI, params.plateauDensitySI, alphaL, effectiveRiseMode) : 0;
+      const rightMean = params.rightRampEnabled ? rampMeanDensity(params.plateauDensitySI, params.rightEndDensitySI, alphaR, effectiveDecayMode) : 0;
+      const densityIntegral = leftMean * leftRampLength + params.plateauDensitySI * params.plateauLength + rightMean * rightRampLength;
+      const arealDensitySI = densityIntegral * 1e-6; // Convert dx from micrometres to metres.
+      // Plateau-normalized diagnostics have no definition when n_p = 0.
+      const leftFactor = !params.leftRampEnabled ? 0 : params.plateauDensitySI > 0 ? leftMean / params.plateauDensitySI : null;
+      const rightFactor = !params.rightRampEnabled ? 0 : params.plateauDensitySI > 0 ? rightMean / params.plateauDensitySI : null;
+      const areaDimensionless = params.plateauDensitySI > 0 ? densityIntegral / params.plateauDensitySI : null;
 
       const profile = {
         x,
@@ -2461,6 +2469,19 @@
     async function exportPlotDataNpZ() {
       if (!latestProfile) {
         showToast('No plot data is available yet.');
+        return;
+      }
+      const requiredValues = [
+        ...latestProfile.x, ...latestProfile.ySI,
+        latestProfile.profileStartX, latestProfile.plateauStart,
+        latestProfile.plateauEnd, latestProfile.profileEnd,
+        state.leftStartDensitySI, state.plateauDensitySI, state.rightEndDensitySI,
+        latestProfile.arealDensitySI
+      ];
+      if (!requiredValues.every(Number.isFinite) || latestProfile.arealDensitySI < 0 ||
+          latestProfile.ySI.some((value) => value < 0) ||
+          !Object.values(latestProfile.crossings).every((value) => value === null || Number.isFinite(value))) {
+        showToast('Plot data contains invalid numeric values. Please check the profile parameters before exporting.');
         return;
       }
       if (!window.JSZip) {
